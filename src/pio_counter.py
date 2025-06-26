@@ -5,10 +5,13 @@
 #  v0.03  bug fix (convert number; minus -> plus is fixed)
 #
 #
+
+
 import time 
-import rp2 
 import machine
 from machine import Pin
+import rp2 
+
 
 machine.freq(125_000_000)  # set machine freq  125MHz
 
@@ -51,40 +54,38 @@ def pin_wait():
 
     # end of loop
 
+
 # Instantiate a state machine with the blink program, 
 # at 2000Hz, with set bound to Pin(16) 
 
-in_pin=Pin(0, Pin.IN, Pin.PULL_UP)
+in_pin = Pin(0, Pin.IN, Pin.PULL_UP)
 
 
 sm = rp2.StateMachine(0, pin_wait, freq=2_000, in_base=in_pin, set_base=Pin(16))   # 2KHz
 
-# Run the state machine for 10 seconds.  The LED will blink with 1KHz. 
-
-
 sm.active(1) 
 
-
-CODE_MOV_ISR = rp2.asm_pio_encode("mov(isr, x)",0)
-CODE_PUSH = rp2.asm_pio_encode("push(noblock)",0)
+CODE_MOV_ISR = rp2.asm_pio_encode("mov(isr, x)", 0)
+CODE_PUSH = rp2.asm_pio_encode("push(noblock)", 0)
 
 prev_count = 0
 
 while True:
-  if sm.rx_fifo() > 0:
-      count = sm.get()
-      if count == 0:
-          print(count)
-      else:
-          count = 0x1_0000_0000 - count
-          if prev_count != count:
-              print(count)
-              prev_count = count
-  else:
-      #sm.exec("mov(isr, x)")     # 0xe080
-      #sm.exec("push(noblock)")   # 0x80a0
-      sm.exec(CODE_MOV_ISR)
-      sm.exec(CODE_PUSH)
+    if sm.rx_fifo() > 0:
+        count = sm.get()
+        if count == 0:
+            print(count)
+        else:
+            count = 0x1_0000_0000 - count
+            if prev_count != count:
+                print(count)
+                prev_count = count
+    else:
+        #sm.exec("mov(isr, x)")     # 0xe080
+        #sm.exec("push(noblock)")   # 0x80a0
+        sm.exec(CODE_MOV_ISR)
+        sm.exec(CODE_PUSH)
+
 
 
 time.sleep(5)
@@ -96,4 +97,3 @@ sm.active(0)
 #
 # https://micropython-docs-ja.readthedocs.io/ja/latest/library/rp2.html#rp2.asm_pio
 # https://micropython-docs-ja.readthedocs.io/ja/latest/library/rp2.html#rp2.asm_pio
-#
