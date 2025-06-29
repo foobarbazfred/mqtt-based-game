@@ -1,15 +1,17 @@
 #
 # class GameAgent
+# micropython version
 # manage State Machine and communicate controller and players
-# pc sample version
 #
 # v0.07  2025/6/29 17:00
 #    create game_agent
+# v0.08  2025/6/29 21:00
+#    refine functions
 #
 
 from topic_defs import *
 import json
-import pdb
+
 
 GAME_DURATIN = 10   # time for click battle
 
@@ -166,14 +168,14 @@ def switch_to_state(next_state):
 
 #
 # return current_state
+#   topic: str
+#   payload: dic
 #
 def switch_state_by_message(topic, payload):
     if topic != TOPIC_COMMAND_CHANGE_STATE:
        print('Error in switch state by message')
        print('not collect topic', topic)
-    payload_str = payload.decode('utf-8')
-    payload_dic = json.loads(payload_str)
-    state = payload_dic['state']
+    state = payload['state']
     if state in STATE_BEHAVIORS:
         switch_to_state(state)
     else: 
@@ -215,7 +217,6 @@ def _switch_to_state_for_controller(next_state):
         payload['cmd_seq'] = cmd_seq
         payload['time_stamp'] = '2000/01/01 00:00:00'
         if next_state == 'STATE_RESULT':
-            #pdb.set_trace()
             payload['player_status'] = player_status     
         print('publish:' , topic, payload)
         client.publish(topic, json.dumps(payload))
@@ -299,29 +300,28 @@ def proc_agent_status_report(player_id, nick_name, click_count):
 #
 # received  message (game summary ) from  controller via game_agent
 #   game_agent w/controller --->  game_agent w/player
+#   topic: str
+#   payload: dic
 #
 def proc_agent_receive_game_summary(topic, payload):
     global player_status
-    payload_str = payload.decode('utf-8')
-    payload_dic = json.loads(payload_str)
-    player_status = payload_dic['player_status']
+    player_status = payload['player_status']
 
 
 #
 # get report from player then update player status
-#
+#   topic : str
+#   payload : dic
 def proc_agent_receive_player_report(topic, payload):
     global player_status
-    payload_str = payload.decode('utf-8')
-    payload_dic = json.loads(payload_str)
-    player_id = payload_dic['player_id']
+    player_id = payload['player_id']
     if player_id in player_status:
         player_status[player_id]['click_count'] = payload_dic['click_count']
     else:
         player_status[player_id] = {
-            'player_id' : payload_dic['player_id'],
-            'player_nick_name' : payload_dic['player_nick_name'],
-            'click_count' : payload_dic['click_count'],
+            'player_id' : payload['player_id'],
+            'player_nick_name' : payload['player_nick_name'],
+            'click_count' : payload['click_count'],
         }
 
 
@@ -332,98 +332,114 @@ def proc_agent_receive_player_report(topic, payload):
 
 
 
+# not used
 # called when message :
 #     TOPIC_GAME_SUMMARY = f'{TOPIC_BASE}/summary'
 #
-def proc_summary(topic, message):
-    global player_status
-    print('summary')
-    print(topic, message)
-    #import pdb
-    #pdb.set_trace()
-    msg_str = message.decode('utf-8')
-    msg_dic = json.loads(msg_str)
-    topic = TOPIC_GAME_SUMMARY
-    print(msg_dic)
-    update_player_status(msg_dic)
-    message = json.dumps( player_status)
-    print('publish:' , topic, message)
-    client.publish(topic, message)
+# def proc_summary(topic, message):
+#     global player_status
+#     print('summary')
+#     print(topic, message)
+#     msg_str = message.decode('utf-8')       # need this??
+#     msg_dic = json.loads(msg_str)
+#     topic = TOPIC_GAME_SUMMARY
+#     print(msg_dic)
+#     update_player_status(msg_dic)
+#     message = json.dumps( player_status)
+#     print('publish:' , topic, message)
+#     client.publish(topic, message)
 
 
 # main loop for controller 
 
 
 
-#
-# MQTT Setup
-#
-
-import paho.mqtt.client as mqtt 
-MQTT_BROKER = 'broker.emqx.io'
-MQTT_PORT = 1883
-
 
 #
 # MQTT Handlers
 #
 
-def on_connect(client, userdata, flag, rc):
-    print("Connected with result code " + str(rc))
-    if is_controller:
-        print('subscribe', f"{TOPIC_ROOT}/player/#")
-        client.subscribe(f"{TOPIC_ROOT}/player/#")
-    elif is_player:
-        client.subscribe(TOPIC_COMMAND_CHANGE_STATE)  
-        client.subscribe(TOPIC_GAME_SUMMARY)
-
-def on_disconnect(client, userdata, rc):
-  if  rc != 0:
-    print("Unexpected disconnection.")
-
-
-
-def on_message(client, userdata, msg):
-    topic = msg.topic
-    payload = msg.payload
-    print("Received: ", topic , '   ' , payload)
-    #end_time = time.perf_counter()
-    #elapsed_time = end_time - start_time
-    #print(f"Elapsed time: {elapsed_time} seconds")
-
-
-def on_message(client, userdata, msg):
+def on_message(topic, msg):
     global current_state
-    topic = msg.topic
-    payload = msg.payload
+    payload = msg
     print('------------------')
     print("Received: ", topic , '   ' , payload)
-
+    topic_str = topic.decode('utf-8')
+    payload_str = payload.decode('utf-8')
+    payload_dic = json.loads(payload_str)
     if is_controller:
-        if topic == TOPIC_PLAYER_REPORT:
+        if topic_str == TOPIC_PLAYER_REPORT:
             # update player state
-            proc_agent_receive_player_report(topic, payload)
+            proc_agent_receive_player_report(topic_str, payload_dic)
         else:
-            print('Error!! unknown topic', topic)
+            print('Error!! unknown topic(L370)', topic_str)
     else:
-        if 'player' in topic:
+        if 'player' in topic_str:
             pass  # skip if plyer in topic (send by me)
-        elif topic == TOPIC_COMMAND_CHANGE_STATE:
-            current_state = switch_state_by_message(topic, payload)
-        elif topic == TOPIC_GAME_SUMMARY:
-            proc_agent_receive_game_summary(topic, payload)
+        elif topic_str == TOPIC_COMMAND_CHANGE_STATE:
+            current_state = switch_state_by_message(topic_str, payload_dic)
+        elif topic_str == TOPIC_GAME_SUMMARY:
+            proc_agent_receive_game_summary(topic_str, payload_dic)
         else:
-            print('Error unkown topic', topic)
+            print('Error unkown topic(L370)', topic_str)
         
 
 #
 # setup MQTT
 #
 
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_disconnect = on_disconnect
-client.on_message = on_message
-client.connect(MQTT_BROKER, MQTT_PORT, 60)
-client.loop_start()
+#import paho.mqtt.client as mqtt 
+#client = mqtt.Client()
+#client.on_connect = on_connect
+#client.on_disconnect = on_disconnect
+#client.on_message = on_message
 
+#
+# MQTT Setup
+#
+
+from umqtt.simple import MQTTClient
+MQTT_BROKER = 'broker.emqx.io'
+MQTT_PORT = 1883
+
+
+clinet = None
+is_controller = None
+is_player = None
+
+def agent_init(conroller_or_player):
+    global is_controller
+    global is_player
+    global client
+
+    if conroller_or_player == 'controller':
+        is_controller = True
+        is_player = False
+    else:
+        is_controller = False
+        is_player = True
+
+    if is_controller:
+        mqtt_client_id = 'cont_1234'    # adhoc!!
+    else:
+        mqtt_client_id = 'play_1234'    # adhoc!!
+    
+    client = MQTTClient(mqtt_client_id, MQTT_BROKER, MQTT_PORT)
+    client.set_callback(on_message)
+    
+    client.connect()
+
+    if is_controller:
+        print('subscribe', f"{TOPIC_ROOT}/player/#")
+        client.subscribe(f"{TOPIC_ROOT}/player/#")
+    else:
+        print('subscribe', TOPIC_COMMAND_CHANGE_STATE)  
+        print('subscribe', TOPIC_GAME_SUMMARY)
+
+        client.subscribe(TOPIC_COMMAND_CHANGE_STATE)  
+        client.subscribe(TOPIC_GAME_SUMMARY)
+    
+    #client.check_msg()
+    
+    
+    

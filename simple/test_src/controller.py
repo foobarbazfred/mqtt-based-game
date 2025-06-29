@@ -10,6 +10,8 @@
 #    refine FSM and push method into FSM
 # v0.07  2025/6/29 17:00
 #    refine FSM and push method into FSM
+# v0.08  2025/6/29 21:00
+#    refine timing
 #
 
 
@@ -41,16 +43,25 @@ def game_sequence():
 
     while True:
 
-        if current_state in ('STATE_OPEN', 'STATE_READY', 'STATE_RESULT', 'STATE_CLOSE'):
+        if current_state in (
+                'STATE_OPEN', 
+                'STATE_READY', 
+                'STATE_RESULT', 
+                'STATE_CLOSE',
+                #'STATE_COUNTDOWN_TO_START_3',
+                #'STATE_COUNTDOWN_TO_START_2',
+                #'STATE_COUNTDOWN_TO_START_1',
+         ):
             pass
         else:
+            print(f'publish summary in {current_state}')
             game_agent.proc_agent_publish_game_summary()
-            time.sleep(0.5)
+            #time.sleep(0.5)
 
         # check trans to next state
         if (time.time() - last_state_transfer ) <  duration:
             pass
-            print('not now state change')
+            #print('not now state change')
             time.sleep(0.5)
 
         else:
