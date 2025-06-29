@@ -1,30 +1,88 @@
-TOPIC_BASE = 'game_renda'
+#
+# v0.07  2025/6/29 17:00
+#    refine
+
+
+TOPIC_ROOT = 'game-renda'
+
 # define topics
-TOPIC_GAME_READY = f'{TOPIC_BASE}/command/ready'
-TOPIC_GAME_COUNTDOWN_TO_START_3 = f'{TOPIC_BASE}/command/countdown/start/3'
-TOPIC_GAME_COUNTDOWN_TO_START_2 = f'{TOPIC_BASE}/command/countdown/start/2'
-TOPIC_GAME_COUNTDOWN_TO_START_1 = f'{TOPIC_BASE}/command/countdown/start/1'
-TOPIC_GAME_START = f'{TOPIC_BASE}/command/start'
-TOPIC_GAME_COUNTDOWN_TO_STOP_3 = f'{TOPIC_BASE}/command/countdown/stop/3'
-TOPIC_GAME_COUNTDOWN_TO_STOP_2 = f'{TOPIC_BASE}/command/countdown/stop/2'
-TOPIC_GAME_COUNTDOWN_TO_STOP_1 = f'{TOPIC_BASE}/command/countdown/stop/1'
-TOPIC_GAME_STOP = f'{TOPIC_BASE}/command/stop'
-TOPIC_GAME_RESULT = f'{TOPIC_BASE}/command/result'
+
+#
+#  controller -> player
+#
+
+#
+# command message for change state machine
+#
+TOPIC_COMMAND_CHANGE_STATE = f'{TOPIC_ROOT}/command/change-state'
+#
+# payload
+#  { 'game_id' : <game_id>, 'next_state' : <next_state> }
+#   
+#   <game_id> := type(str)
+#   <next_state> := type(str)
+#
+
+
+TOPIC_GAME_SUMMARY = f'{TOPIC_ROOT}/summary'
+#
+# payload
+#  {
+#    'game_id' : <str> 
+#    'player_status' :
+#        { <plyer_id> : {'click_count' : <click_count> 'nick_name' : <name>,
+#            ....
+#        
+#     }
+#  }
+#
 
 
 #
-# Periodic task (request status to players and report summary)
-# (exec every 0.5 sec)
-
+# not in use
+#
+# command message for upload players status
 # controller -> player
-# proc_player_status_report()
-TOPIC_GAME_STATUS_REPORT = f'{TOPIC_BASE}/command/status_report'
+#
+#TOPIC_GAME_STATUS_REPORT = f'{TOPIC_ROOT}/command/upload-status'
+#
+# payload
+#  { 'game_id' : <str> }
+#
 
 
-# player -> controller
-TOPIC_PLAYERS_REPORT = f'{TOPIC_BASE}/player/report'
+#
+#  not in use
+#  player -> controller
+#
 
-# controller -> player
-# proc_player_summary()
-TOPIC_GAME_SUMMARY = f'{TOPIC_BASE}/summary'
+#
+# join message from player
+#
+# TOPIC_PLAYER_JOIN = f'{TOPIC_ROOT}/player/join'
+#
+# payload
+#  { 'player_id' : <str>, 'player_nick_name' : <str> }
+#
+
+
+#
+# report message from player
+#
+TOPIC_PLAYER_REPORT = f'{TOPIC_ROOT}/player/report'
+#
+# payload
+#  { 'player_id' : <str>, 'click_count' : <int> }
+#
+
+
+# not in use
+#
+# leave message from player
+#
+# TOPIC_PLAYER_LEAVE = f'{TOPIC_ROOT}/player/leave'
+#
+# payload
+#  { 'player_id' : <str>, 'player_nick_name' : <str> }
+#
 
