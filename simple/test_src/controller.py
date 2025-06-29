@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
-#
+#  
 # controller sample code for MQTT Renda OH
+# file: ~/lang/py/mqtt/game_rk_game_agent/controller.py
 #
 # PC Sample Version
 # v0.04  2025/6/28 refactor, 
