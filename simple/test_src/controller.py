@@ -24,7 +24,7 @@ PLAYER_NICK_NAME = 'pcpy02'
 
 from topic_defs import *
 import game_agent
-game_agent.controller_or_player = 'controller'
+game_agent.is_controller = True
 
 
 def game_sequence():

@@ -19,7 +19,9 @@ current_state = None
 
 game_id = None
 
-controller_or_player = None
+is_controller = False
+is_player = False
+
 player_status = {}
 
 def proc_agent_open_game():
@@ -156,7 +158,7 @@ def switch_to_next_state():
 
 def switch_to_state(next_state):
 
-    if controller_or_player == 'controller':
+    if is_controller:
         return _switch_to_state_for_controller(next_state)
     else:
         return _switch_to_state_for_player(next_state)
@@ -367,10 +369,10 @@ MQTT_PORT = 1883
 
 def on_connect(client, userdata, flag, rc):
     print("Connected with result code " + str(rc))
-    if controller_or_player == 'controller':
+    if is_controller:
         print('subscribe', f"{TOPIC_ROOT}/player/#")
         client.subscribe(f"{TOPIC_ROOT}/player/#")
-    elif controller_or_player == 'player':
+    elif is_player:
         client.subscribe(TOPIC_COMMAND_CHANGE_STATE)  
         client.subscribe(TOPIC_GAME_SUMMARY)
 
@@ -396,7 +398,7 @@ def on_message(client, userdata, msg):
     print('------------------')
     print("Received: ", topic , '   ' , payload)
 
-    if controller_or_player == 'controller':
+    if is_controller:
         if topic == TOPIC_PLAYER_REPORT:
             # update player state
             proc_agent_receive_player_report(topic, payload)

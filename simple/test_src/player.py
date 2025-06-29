@@ -30,7 +30,7 @@ click_count = 0
 
 from topic_defs import *
 import game_agent
-game_agent.controller_or_player = 'player'
+game_agent.is_player = True
 game_agent.init_state()
 current_state = game_agent.get_current_state()
 
@@ -97,7 +97,6 @@ game_agent.set_cb_func('STATE_CLOSE', proc_player_close)
 
 last_state_transfer = 0
 duration = 0
-
 
 #
 # main function
