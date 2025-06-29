@@ -2,9 +2,12 @@
 # class GameAgent
 # manage State Machine and communicate controller and players
 # pc sample version
+# file: ~/lang/py/mqtt/game_rk_game_agent/game_agent.py
 #
 # v0.07  2025/6/29 17:00
 #    create game_agent
+# v0.08  2025/6/29 22:00
+#    6/29 final
 #
 
 from topic_defs import *

@@ -12,6 +12,8 @@
 #    refine FSM to game_agent
 # v0.07  2025/6/29 17:00
 #    refine
+# v0.08  2025/6/29 22:00
+#    6/29 final
 #
 
 import time
