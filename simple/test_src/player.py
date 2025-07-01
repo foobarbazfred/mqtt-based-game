@@ -15,7 +15,9 @@
 # v0.08  2025/6/29 22:00
 #    6/29 final
 # v0.09  2025/7/1 22:20
-#    7/1 final
+#    7/1 
+# v0.10  2025/7/1 22:30
+#    7/1 final change calling function
 #
 
 import time
@@ -137,7 +139,7 @@ duration = 0
 
 def player_main_loop():
     while True:
-        game_agent.publish_click_report()
+        game_agent.exec_game_agent_task()
 
 
 player_main_loop()
