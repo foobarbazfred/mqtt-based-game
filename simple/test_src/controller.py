@@ -2,6 +2,7 @@
 
 #  
 # controller sample code for MQTT Renda OH
+# pc sample version
 # file: ~/lang/py/mqtt/game_rk_game_agent/controller.py
 #
 # PC Sample Version
@@ -15,6 +16,8 @@
 #    refine timing
 # v0.09  2025/6/29 22:00
 #    6/29 final
+# v0.10  2025/7/1 21:00
+#    7/1 final
 #
 
 
@@ -32,6 +35,16 @@ import game_agent
 game_agent.is_controller = True
 
 
+def proc_controller_find_winner(game_member_status):
+    payload = {
+        'game_member_status' : game_member_status,
+        'winner' : 'id_0123_win'
+    }
+    return payload
+
+game_agent.set_cb_func('STATE_RESULT', proc_controller_find_winner, is_controller=True)
+
+
 def game_sequence():
 
     current_state = None
@@ -45,28 +58,15 @@ def game_sequence():
     last_state_transfer = time.time()
 
     while True:
-
-        if current_state in (
-                'STATE_OPEN', 
-                'STATE_READY', 
-                'STATE_RESULT', 
-                'STATE_CLOSE',
-                #'STATE_COUNTDOWN_TO_START_3',
-                #'STATE_COUNTDOWN_TO_START_2',
-                #'STATE_COUNTDOWN_TO_START_1',
-         ):
-            pass
-        else:
-            print(f'publish summary in {current_state}')
-            game_agent.proc_agent_publish_game_summary()
-            #time.sleep(0.5)
+       
+        # kick game_agent_task 
+        game_agent.exec_game_agent_task()
 
         # check trans to next state
         if (time.time() - last_state_transfer ) <  duration:
             pass
             #print('not now state change')
             time.sleep(0.5)
-
         else:
             #  
             # switch to next state
@@ -78,7 +78,8 @@ def game_sequence():
             #import pdb
             #pdb.set_trace()
             last_state_transfer = time.time()
-
+            # for debug (accell)
+            #last_state_transfer = 0
     
 def controller_main_loop():
     while True:
@@ -88,3 +89,13 @@ def controller_main_loop():
 	
 
 controller_main_loop()
+
+
+
+
+
+
+
+
+
+

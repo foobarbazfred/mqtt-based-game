@@ -8,9 +8,18 @@
 #    create game_agent
 # v0.08  2025/6/29 22:00
 #    6/29 final
+# v0.09  2025/7/1 22:20
+#    7/1 final
+#
+
+# 
+# ==ZAN==  not implemeted  ==ZAN==
+# if receive message from controller
+# which shows game member summary
 #
 
 from topic_defs import *
+import datetime
 import json
 import pdb
 
@@ -26,14 +35,15 @@ game_id = None
 is_controller = False
 is_player = False
 
-player_status = {}
+game_member_status = {}
 
 def proc_agent_open_game():
     global game_id
-    global player_status
+    global game_member_status
     print('open_new_game')
     game_id = 'game_12345'
-    player_status = {}
+    game_member_status = {}
+
 
 STATE_BEHAVIORS = {
 
@@ -121,9 +131,13 @@ STATE_BEHAVIORS = {
     'STATE_RESULT' : {
        'topic' : TOPIC_COMMAND_CHANGE_STATE,
        'payload' : { 'state' : 'STATE_RESULT' , 
-                     'player_status' : None,   # set value in  _switch_to_state_for_controller(next_state):
+                     'game_member_status' : None,   # set in controller_action
+# value in  _switch_to_state_for_controller(next_state):
+
+                     'winner' : None,  # set in controller_action
                    },
        'player_action' : None,
+       'controller_action' : None,
        'duration' : 5,
        'next_state' : 'STATE_CLOSE',
     },
@@ -137,13 +151,32 @@ STATE_BEHAVIORS = {
     },
 }
 
+#
+# call back for update click info
+# periodic process
+#
+UPDATE_CLICK_INFO_BEHAVIORS = {
+   'CB_REPORT_STATUS' : None,
+   'CB_DISP_STATUS' : None,
+}
 
-def set_cb_func(state_name,func):
-   if state_name in STATE_BEHAVIORS:
-       STATE_BEHAVIORS[state_name]['player_action'] = func
+
+def set_cb_func(cb_name, func, is_controller = False):
+
+   if cb_name in STATE_BEHAVIORS:
+       if is_controller:
+           STATE_BEHAVIORS[cb_name]['controller_action'] = func
+       else:
+           STATE_BEHAVIORS[cb_name]['player_action'] = func
+
+   elif  cb_name in UPDATE_CLICK_INFO_BEHAVIORS:
+       UPDATE_CLICK_INFO_BEHAVIORS[cb_name] = func
+
    else:
        print('Error in set_cb_func')
-       print('unknown state name', state_name)
+       print('unknown state name', cb_name)
+       import pdb
+       pdb.set_trace()
 
 def init_state():
     switch_to_state(INIT_STATE)    
@@ -184,12 +217,6 @@ def switch_state_by_message(topic, payload):
        print('can not find match topic', topic)
     return current_state
 
-
-def _exec_agent_action(state):
-    if 'agent_action' in STATE_BEHAVIORS[state]:
-       func = STATE_BEHAVIORS[state]['agent_action']
-       if func is not None:
-            func()
 #
 # state switch function for controller
 #
@@ -198,32 +225,36 @@ def _exec_agent_action(state):
 #    duration:  (wait time until transfer to next state)
 #
 cmd_seq = 0
-def _switch_to_state_for_controller(next_state):
+def _switch_to_state_for_controller(state):
     global cmd_seq
     global current_state
 
-    if not next_state in STATE_BEHAVIORS:
+    agent_ret_val = None
+    cont_ret_val = None
+
+    if not state in STATE_BEHAVIORS:
         print('Error ! no match next_state in STATE_BEHAVIORS', state)
         return (current_state, 0)
     else:
-        if next_state == 'STATE_READY':
+        if state == 'STATE_READY':
             print('============== READY!!! ===============')
 
-        _exec_agent_action(next_state)
-        print(f'--- state transfer ->({next_state}) --')
-        print('next state:', next_state)
-        topic = STATE_BEHAVIORS[next_state]['topic']
-        payload = STATE_BEHAVIORS[next_state]['payload']
-        duration = STATE_BEHAVIORS[next_state]['duration']
+        agent_ret_val = _exec_agent_action(state)
+        cont_ret_val = _exec_controller_action(state, game_member_status)
+
+        print(f'--- state transfer ->({state}) --')
+        print('next state:', state)
+        topic = STATE_BEHAVIORS[state]['topic']
+        payload = STATE_BEHAVIORS[state]['payload']
+        duration = STATE_BEHAVIORS[state]['duration']
         payload['cmd_seq'] = cmd_seq
-        payload['time_stamp'] = '2000/01/01 00:00:00'
-        if next_state == 'STATE_RESULT':
-            #pdb.set_trace()
-            payload['player_status'] = player_status     
+        payload['time_stamp'] = str(datetime.datetime.now())
+        if state == 'STATE_RESULT':
+            payload = payload | cont_ret_val
         print('publish:' , topic, payload)
         client.publish(topic, json.dumps(payload))
         cmd_seq += 1
-        current_state = next_state
+        current_state = state
         return  (current_state , duration)
 
 #
@@ -237,16 +268,41 @@ def _switch_to_state_for_player(state):
     if not state in STATE_BEHAVIORS:
         print('Error ! no match next_state in STATE_BEHAVIORS', state)
     else:
-        _exec_agent_action(state)
-        player_action = STATE_BEHAVIORS[state]['player_action']
-        if player_action is None:
-             print('not defined function, skip', state)
-             val = None
-        else:
-             val = player_action()
+        val = _exec_agent_action(state)
+        val = _exec_player_action(state) 
         current_state = state
 
     return current_state
+
+def _exec_agent_action(state):
+    val = None
+    if 'agent_action' in STATE_BEHAVIORS[state]:
+       func = STATE_BEHAVIORS[state]['agent_action']
+       if func is not None:
+            val = func()
+    return val
+
+def _exec_controller_action(state, game_member_status):
+    val = None
+    if 'controller_action' in STATE_BEHAVIORS[state]:
+       func = STATE_BEHAVIORS[state]['controller_action']
+       print('exec controller action:', func)
+       #import pdb
+       #pdb.set_trace()
+       if func is not None:
+            val = func(game_member_status)
+    return val
+
+def _exec_player_action(state):
+    val = None
+    if 'player_action' in STATE_BEHAVIORS[state]:
+        func = STATE_BEHAVIORS[state]['player_action']
+        if func is None:
+             print('not defined function, skip', state)
+             val = None
+        else:
+             val = func()
+    return val
 
 
 
@@ -257,101 +313,6 @@ def _switch_to_state_for_player(state):
 #
 
 
-
-#
-# publish game summary  from controller via game_agent 
-# controller -----> game_agent  --->  player
-#
-#
-def proc_agent_publish_game_summary():
-    topic = TOPIC_GAME_SUMMARY
-    payload = {
-        'game_id' : game_id,
-        'player_status' : player_status,
-    }
-    client.publish(topic, json.dumps(payload))
-
-
-#
-# periodic topics and function
-# publish player -> controller via game_agent
-#
-#
-
-def proc_agent_status_report(player_id, nick_name, click_count):
-    topic = TOPIC_PLAYER_REPORT
-    cmd_seq = 123
-    message = json.dumps( {
-          'command_id': cmd_seq,
-          'click_count': click_count,
-          'player_id' : player_id,
-          'player_nick_name' : nick_name
-    } )
-    print('publish:' , topic, message)
-    client.publish(topic, message)
-
-
-#def proc_player_summary():
-#    print('summary')
-
-
-
-
-
-
-#
-# received  message (game summary ) from  controller via game_agent
-#   game_agent w/controller --->  game_agent w/player
-#
-def proc_agent_receive_game_summary(topic, payload):
-    global player_status
-    payload_str = payload.decode('utf-8')
-    payload_dic = json.loads(payload_str)
-    player_status = payload_dic['player_status']
-
-
-#
-# get report from player then update player status
-#
-def proc_agent_receive_player_report(topic, payload):
-    global player_status
-    payload_str = payload.decode('utf-8')
-    payload_dic = json.loads(payload_str)
-    player_id = payload_dic['player_id']
-    if player_id in player_status:
-        player_status[player_id]['click_count'] = payload_dic['click_count']
-    else:
-        player_status[player_id] = {
-            'player_id' : payload_dic['player_id'],
-            'player_nick_name' : payload_dic['player_nick_name'],
-            'click_count' : payload_dic['click_count'],
-        }
-
-
-
-
-
-
-
-
-
-# called when message :
-#     TOPIC_GAME_SUMMARY = f'{TOPIC_BASE}/summary'
-#
-def proc_summary(topic, message):
-    global player_status
-    print('summary')
-    print(topic, message)
-    #import pdb
-    #pdb.set_trace()
-    msg_str = message.decode('utf-8')
-    msg_dic = json.loads(msg_str)
-    topic = TOPIC_GAME_SUMMARY
-    print(msg_dic)
-    update_player_status(msg_dic)
-    message = json.dumps( player_status)
-    print('publish:' , topic, message)
-    client.publish(topic, message)
 
 
 # main loop for controller 
@@ -430,3 +391,161 @@ client.on_message = on_message
 client.connect(MQTT_BROKER, MQTT_PORT, 60)
 client.loop_start()
 
+
+
+#
+#  share players staus
+#
+#  collect -> summary -> deliver 
+#
+
+#
+#  player -->  game_agent --> controller 
+#
+
+def proc_agent_status_report():
+    topic = TOPIC_PLAYER_REPORT
+    cmd_seq = 123
+    func = UPDATE_CLICK_INFO_BEHAVIORS['CB_REPORT_STATUS']
+    if func is None:
+        print('at status report ,  cb func is None , so skip')
+        return None
+    else:
+        payload = func(game_member_status)
+        print('publish:' , topic, payload)
+        client.publish(topic, payload)
+
+
+#
+#   periodocally publish message
+#   publish click summary  from controller to player via game_agent 
+#   controller -----> game_agent  --->  player
+#
+
+def publish_click_summary():
+
+        if current_state in (
+                'STATE_OPEN', 
+                'STATE_READY', 
+                'STATE_RESULT', 
+                'STATE_CLOSE',
+         ):
+            pass
+        else:
+            print(f'publish summary in {current_state}')
+            topic = TOPIC_GAME_SUMMARY
+            payload = {
+                   'game_id' : game_id,
+                   'game_member_status' : game_member_status,
+            }
+            client.publish(topic, json.dumps(payload))
+
+
+#
+# received  message (game summary ) from  controller via game_agent
+#   game_agent w/controller --->  game_agent w/player
+#
+def proc_agent_receive_game_summary(topic, payload):
+    global game_member_status
+    payload_str = payload.decode('utf-8')
+    payload_dic = json.loads(payload_str)
+    game_member_status = payload_dic['game_member_status']
+
+
+
+#
+# periodic topics and function
+#
+# publish player -> controller via game_agent
+#
+#
+
+
+def proc_agent_receive_player_report(topic, payload):
+      global game_member_status
+      payload_str = payload.decode('utf-8')
+      payload_dic = json.loads(payload_str)
+      player_id = payload_dic['player_id']
+      if player_id in game_member_status:
+          game_member_status[player_id]['click_count'] = payload_dic['click_count']
+      else:
+          game_member_status[player_id] = {
+              'player_id' : payload_dic['player_id'],
+              'player_nick_name' : payload_dic['player_nick_name'],
+              'click_count' : payload_dic['click_count'],
+          }
+   
+def exec_game_agent_task():
+     if is_player:
+          publish_click_report()
+     else:
+          publish_click_summary()
+
+#
+#  send message player ---> controller
+#
+
+import time
+last_click_report = 0
+def publish_click_report():
+     global last_click_report
+
+     current_state = get_current_state()
+     #print('current_state:', current_state)
+     if current_state in ('STATE_OPEN', 'STATE_READY', 'STATE_RESULT', 'STATE_CLOSE'):
+              #print('z ',end='')
+              pass
+     else:
+         if (time.time() - last_click_report) < 0.5:
+              #print('z ',end='')
+              pass
+         else: 
+             print('report status to controller')
+             proc_agent_status_report()
+             last_click_report = time.time()
+
+#
+# not in use 
+#
+
+
+#   
+#   
+#   #
+#   # called when message :
+#   #     TOPIC_GAME_SUMMARY = f'{TOPIC_BASE}/summary'
+#   #  controller ---> player 
+#   #
+#   def proc_summary(topic, message):
+#       global game_member_status
+#       print('summary')
+#       print(topic, message)
+#       #import pdb
+#       #pdb.set_trace()
+#       msg_str = message.decode('utf-8')
+#       msg_dic = json.loads(msg_str)
+#       topic = TOPIC_GAME_SUMMARY
+#       print(msg_dic)
+#       update_game_member_status(msg_dic)
+#       message = json.dumps( game_member_status)
+#       print('publish:' , topic, message)
+#       client.publish(topic, message)
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   #
+#   # report from player
+#   # player ---> controller
+#   #
+#   
+#   #
+#   # get report from player then update player status
+#   #
+#   
+#   
+#   

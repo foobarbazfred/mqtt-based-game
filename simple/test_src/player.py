@@ -14,6 +14,8 @@
 #    refine
 # v0.08  2025/6/29 22:00
 #    6/29 final
+# v0.09  2025/7/1 22:20
+#    7/1 final
 #
 
 import time
@@ -81,6 +83,34 @@ def proc_player_result():
 def proc_player_close():
     print('cb func: close')
 
+click_count = 0
+#
+#  not use game_member_status
+#
+def proc_player_report_status(game_member_status):
+    global click_count
+    print('cb func: get click')    
+    print('RRRRR')
+    click_count += 1
+    payload = json.dumps({
+          'click_count': click_count,
+          'player_id' : PLAYER_ID,
+          'player_nick_name' : PLAYER_NICK_NAME,
+    })
+    return  payload
+
+def proc_player_display_status(game_member_status):
+    print('cb func: display member status')    
+    print('----> [  ] <------------')
+    payload = json.dumps({
+          'click_count': click_count,
+          'player_id' : PLAYER_ID,
+          'player_nick_name' : PLAYER_NICK_NAME,
+    })
+    return  payload
+
+
+
 game_agent.set_cb_func('STATE_OPEN', proc_player_open)
 game_agent.set_cb_func('STATE_READY', proc_player_ready)
 game_agent.set_cb_func('STATE_COUNTDOWN_TO_START_3', proc_player_countdown_to_start_3)
@@ -93,8 +123,8 @@ game_agent.set_cb_func('STATE_COUNTDOWN_TO_STOP_1', proc_player_countdown_to_sto
 game_agent.set_cb_func('STATE_STOP', proc_player_stop)
 game_agent.set_cb_func('STATE_RESULT', proc_player_result)
 game_agent.set_cb_func('STATE_CLOSE', proc_player_close)
-
-
+game_agent.set_cb_func('CB_REPORT_STATUS', proc_player_report_status)
+game_agent.set_cb_func('CB_DISP_STATUS', proc_player_display_status)
 
 
 last_state_transfer = 0
@@ -104,17 +134,10 @@ duration = 0
 # main function
 #
 
+
 def player_main_loop():
-    global click_count
     while True:
-        click_count += 1
-        current_state = game_agent.get_current_state()
-        print('current_state:', current_state)
-        if current_state in ('STATE_OPEN', 'STATE_READY', 'STATE_RESULT', 'STATE_CLOSE'):
-            print('z ',end='')
-        else:
-            print('report status to controller')
-            game_agent.proc_agent_status_report(PLAYER_ID, PLAYER_NICK_NAME, click_count)
-        time.sleep(0.5)
+        game_agent.publish_click_report()
+
 
 player_main_loop()
