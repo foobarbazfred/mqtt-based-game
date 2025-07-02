@@ -18,9 +18,12 @@
 #    6/29 final
 # v0.10  2025/7/1 21:00
 #    7/1 final
+# v0.11  2025/7/2  22:05
+#    Restructured function scopes for improved clarity and logic isolation
 #
 
 
+import datetime
 import time
 import json
 
@@ -38,7 +41,8 @@ game_agent.is_controller = True
 def proc_controller_find_winner(game_member_status):
     payload = {
         'game_member_status' : game_member_status,
-        'winner' : 'id_0123_win'
+        'winner' : 'id_0123_win',
+        'time_stamp' : str(datetime.datetime.now()),
     }
     return payload
 

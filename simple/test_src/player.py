@@ -18,8 +18,12 @@
 #    7/1 
 # v0.10  2025/7/1 22:30
 #    7/1 final change calling function
+# v0.11  2025/7/2 22:05
+#    Restructured function scopes for improved clarity and logic isolation
+#    
 #
 
+import datetime
 import time
 import json
 import paho.mqtt.client as mqtt 
@@ -32,6 +36,7 @@ PLAYER_ID = 'pc_py_0001'
 PLAYER_NICK_NAME = 'pcpy01'
 
 click_count = 0
+stop_flag = True
 
 
 from topic_defs import *
@@ -49,8 +54,13 @@ current_state = game_agent.get_current_state()
 
 def proc_player_open():
     global click_count
+    global stop_flag
+
+
     print('cb func: open')
     click_count = 0
+    stop_flag = True
+
 
 def proc_player_ready():
     print('cb func: ready')
@@ -65,6 +75,10 @@ def proc_player_countdown_to_start_1():
     print('cb func: cdts1')
 
 def proc_player_start():
+    global click_count
+    global stop_flag
+    click_count = 0
+    stop_flag = False
     print('cb func: start')
 
 def proc_player_countdown_to_stop_3():
@@ -77,40 +91,53 @@ def proc_player_countdown_to_stop_1():
     print('cb func: cdtp1')
 
 def proc_player_stop():
+    global click_count
+    global stop_flag
+
+    stop_flag = True
     print('cb func: stop')
 
-def proc_player_result():
+def proc_player_result(payload):
     print('cb func: result')
+    print('WWWWWWWWWWWWWWWWWIIIIIIIIIIIIIINNNNNNNNNNNNNNNNNNN')
+    #print('result:', payload)
+    payload_str = payload.decode('utf-8')
+    payload_dic = json.loads(payload_str)
+    print('winner:', payload_dic['winner'])
+    print('--=====---------------------=============---------')
+
+
 
 def proc_player_close():
     print('cb func: close')
 
-click_count = 0
+
 #
 #  not use game_member_status
 #
-def proc_player_report_status(game_member_status):
+def proc_player_report_status():
     global click_count
+    global stop_flag
+
     print('cb func: get click')    
     print('RRRRR')
-    click_count += 1
+    if stop_flag is False:
+        click_count += 1
     payload = json.dumps({
           'click_count': click_count,
           'player_id' : PLAYER_ID,
           'player_nick_name' : PLAYER_NICK_NAME,
+          'time_stamp' : str(datetime.datetime.now()),
     })
     return  payload
 
-def proc_player_display_status(game_member_status):
+def proc_player_display_status(topic, payload):
     print('cb func: display member status')    
-    print('----> [  ] <------------')
-    payload = json.dumps({
-          'click_count': click_count,
-          'player_id' : PLAYER_ID,
-          'player_nick_name' : PLAYER_NICK_NAME,
-    })
-    return  payload
-
+    payload_str = payload.decode('utf-8')
+    payload_dic = json.loads(payload_str)
+    print('--=========--> [  ] <------=============---------')
+    print(payload_dic['game_member_status'])
+    print('--=====---------------------=============---------')
 
 
 game_agent.set_cb_func('STATE_OPEN', proc_player_open)
@@ -126,7 +153,10 @@ game_agent.set_cb_func('STATE_STOP', proc_player_stop)
 game_agent.set_cb_func('STATE_RESULT', proc_player_result)
 game_agent.set_cb_func('STATE_CLOSE', proc_player_close)
 game_agent.set_cb_func('CB_REPORT_STATUS', proc_player_report_status)
-game_agent.set_cb_func('CB_DISP_STATUS', proc_player_display_status)
+game_agent.set_cb_func('CBM_DISP_STATUS', proc_player_display_status)
+
+
+
 
 
 last_state_transfer = 0
