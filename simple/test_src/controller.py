@@ -20,6 +20,8 @@
 #    7/1 final
 # v0.11  2025/7/2  22:05
 #    Restructured function scopes for improved clarity and logic isolation
+# v0.12  2025/7/3
+#    Restructured function scopes for improved clarity and logic isolation
 #
 
 
@@ -46,20 +48,23 @@ def proc_controller_find_winner(game_member_status):
     }
     return payload
 
-game_agent.set_cb_func('STATE_RESULT', proc_controller_find_winner, is_controller=True)
+game_agent.set_cb_func_for_controller('STATE_RESULT', proc_controller_find_winner)
 
 
+import random
 def game_sequence():
 
     current_state = None
     last_state_transfer = 0
     duration = 0
     cmd_seq = 0
+    game_id = 'game_123_' + random.choice(('x','y','x'))
 
-    game_agent.init_state()
-    current_state = game_agent.get_current_state()
-    duration = game_agent.get_duration_to_transition(current_state)
+
+    current_state, duration = game_agent.open_game_by_controller(game_id)
     last_state_transfer = time.time()
+    import pdb
+    #pdb.set_trace()
 
     while True:
        
@@ -69,13 +74,12 @@ def game_sequence():
         # check trans to next state
         if (time.time() - last_state_transfer ) <  duration:
             pass
-            #print('not now state change')
-            time.sleep(0.5)
         else:
             #  
             # switch to next state
             #  
-            current_state, duration = game_agent.switch_to_next_state()
+            next_state = game_agent.get_next_state()
+            current_state, duration = game_agent.change_state_by_controller(next_state)
             print('wait for ...', duration)
             if current_state == 'STATE_CLOSE' :
                 break
@@ -86,6 +90,8 @@ def game_sequence():
             #last_state_transfer = 0
     
 def controller_main_loop():
+
+    game_agent.init('controller')
     while True:
         print('game start')
         game_sequence()

@@ -20,6 +20,8 @@
 #    7/1 final change calling function
 # v0.11  2025/7/2 22:05
 #    Restructured function scopes for improved clarity and logic isolation
+# v0.12  2025/7/3
+#    Restructured function scopes for improved clarity and logic isolation
 #    
 #
 
@@ -41,9 +43,6 @@ stop_flag = True
 
 from topic_defs import *
 import game_agent
-game_agent.is_player = True
-game_agent.init_state()
-current_state = game_agent.get_current_state()
 
 #pdb.set_trace()
 
@@ -55,7 +54,6 @@ current_state = game_agent.get_current_state()
 def proc_player_open():
     global click_count
     global stop_flag
-
 
     print('cb func: open')
     click_count = 0
@@ -97,13 +95,13 @@ def proc_player_stop():
     stop_flag = True
     print('cb func: stop')
 
-def proc_player_result(payload):
+def proc_player_result():
     print('cb func: result')
     print('WWWWWWWWWWWWWWWWWIIIIIIIIIIIIIINNNNNNNNNNNNNNNNNNN')
     #print('result:', payload)
-    payload_str = payload.decode('utf-8')
-    payload_dic = json.loads(payload_str)
-    print('winner:', payload_dic['winner'])
+    result, game_member_status = game_agent.get_result()
+    print('winner:', result)
+    print('status:', game_member_status)
     print('--=====---------------------=============---------')
 
 
@@ -140,20 +138,20 @@ def proc_player_display_status(topic, payload):
     print('--=====---------------------=============---------')
 
 
-game_agent.set_cb_func('STATE_OPEN', proc_player_open)
-game_agent.set_cb_func('STATE_READY', proc_player_ready)
-game_agent.set_cb_func('STATE_COUNTDOWN_TO_START_3', proc_player_countdown_to_start_3)
-game_agent.set_cb_func('STATE_COUNTDOWN_TO_START_2', proc_player_countdown_to_start_2)
-game_agent.set_cb_func('STATE_COUNTDOWN_TO_START_1',  proc_player_countdown_to_start_1)
-game_agent.set_cb_func('STATE_START', proc_player_start)
-game_agent.set_cb_func('STATE_COUNTDOWN_TO_STOP_3', proc_player_countdown_to_stop_3)
-game_agent.set_cb_func('STATE_COUNTDOWN_TO_STOP_2', proc_player_countdown_to_stop_2)
-game_agent.set_cb_func('STATE_COUNTDOWN_TO_STOP_1', proc_player_countdown_to_stop_1)
-game_agent.set_cb_func('STATE_STOP', proc_player_stop)
-game_agent.set_cb_func('STATE_RESULT', proc_player_result)
-game_agent.set_cb_func('STATE_CLOSE', proc_player_close)
-game_agent.set_cb_func('CB_REPORT_STATUS', proc_player_report_status)
-game_agent.set_cb_func('CBM_DISP_STATUS', proc_player_display_status)
+game_agent.set_cb_func_for_player('STATE_OPEN', proc_player_open)
+game_agent.set_cb_func_for_player('STATE_READY', proc_player_ready)
+game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_START_3', proc_player_countdown_to_start_3)
+game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_START_2', proc_player_countdown_to_start_2)
+game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_START_1',  proc_player_countdown_to_start_1)
+game_agent.set_cb_func_for_player('STATE_START', proc_player_start)
+game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_3', proc_player_countdown_to_stop_3)
+game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_2', proc_player_countdown_to_stop_2)
+game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_1', proc_player_countdown_to_stop_1)
+game_agent.set_cb_func_for_player('STATE_STOP', proc_player_stop)
+game_agent.set_cb_func_for_player('STATE_RESULT', proc_player_result)
+game_agent.set_cb_func_for_player('STATE_CLOSE', proc_player_close)
+game_agent.set_cb_func_for_player('CB_REPORT_STATUS', proc_player_report_status)
+game_agent.set_cb_func_for_player('CBM_DISP_STATUS', proc_player_display_status)
 
 
 
@@ -168,6 +166,8 @@ duration = 0
 
 
 def player_main_loop():
+    #game_agent.is_player = True
+    game_agent.init('player')
     while True:
         game_agent.exec_game_agent_task()
 
