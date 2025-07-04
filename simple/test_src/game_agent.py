@@ -14,18 +14,25 @@
 #    Restructured function scopes for improved clarity and logic isolation
 # v0.11  2025/7/3 
 #    Restructured function scopes for improved clarity and logic isolation
-#
+# v0.12  2025/7/4
+#    Restructured function scopes for improved clarity and logic isolation
 
-# 
-# ==ZAN==  not implemeted  ==ZAN==
-# if receive message from controller
-# which shows game member summary
-#
+
 
 from topic_defs import *
 import datetime
 import json
 import pdb
+import time
+
+
+#
+# MQTT Defs
+#
+import paho.mqtt.client as mqtt 
+MQTT_BROKER = 'broker.emqx.io'
+MQTT_PORT = 1883
+
 
 GAME_DURATIN = 10   # time for click battle
 
@@ -43,6 +50,17 @@ game_member_status = {}
 result = {}
 
 
+#
+# call back for update click info
+# periodic process
+#
+CB_PLAYER_CREATE_REPORT = None
+CB_PLAYER_DISP_STATUS = None
+
+
+#
+#
+#
 STATE_BEHAVIORS = {
 
     'STATE_OPEN' : {
@@ -148,12 +166,6 @@ STATE_BEHAVIORS = {
     },
 }
 
-#
-# call back for update click info
-# periodic process
-#
-CB_PUBLISH_REPORT_STATUS = None
-CBM_RECEIVE_DISP_STATUS = None
 
 def set_cb_func_for_controller(cb_name, func):
     if cb_name in STATE_BEHAVIORS:
@@ -164,30 +176,18 @@ def set_cb_func_for_controller(cb_name, func):
 
 def set_cb_func_for_player(cb_name, func):
 
-    global CB_PUBLISH_REPORT_STATUS
-    global CBM_RECEIVE_DISP_STATUS
+    global CB_PLAYER_CREATE_REPORT
+    global CB_PLAYER_DISP_STATUS
 
     if cb_name in STATE_BEHAVIORS:
         STATE_BEHAVIORS[cb_name]['player_action'] = func
-    elif  cb_name == 'CB_REPORT_STATUS':
-        CB_PUBLISH_REPORT_STATUS = func
-    elif  cb_name == 'CBM_DISP_STATUS':
-        CBM_RECEIVE_DISP_STATUS = func
+    elif  cb_name == 'CB_PLAYER_CREATE_REPORT':
+        CB_PLAYER_CREATE_REPORT = func
+    elif  cb_name == 'CB_PLAYER_DISP_STATUS':
+        CB_PLAYER_DISP_STATUS = func
     else:
         print('Error in set_cb_func')
-        print('unknown state name', cb_name)
-
-def init(player_or_controller):
-    global game_member_status
-    global is_controller
-    global is_player
-    print('init')
-    game_member_status = {}
-    if player_or_controller == 'controller':
-       is_controller = True
-    if player_or_controller == 'player':
-       is_player = True
-    connect()
+        print('unknown cb_name', cb_name)
 
 def get_current_state():
     return current_state
@@ -203,6 +203,23 @@ def get_duration_to_transition(state):
 def get_result():
     return result, game_member_status
 
+#
+#
+#
+#
+
+def init(player_or_controller):
+    global game_member_status
+    global is_controller
+    global is_player
+    print('init')
+    game_member_status = {}
+    if player_or_controller == 'controller':
+       is_controller = True
+    if player_or_controller == 'player':
+       is_player = True
+    _connect()
+
 
 def open_game_by_controller(gid):
     global game_id
@@ -210,7 +227,7 @@ def open_game_by_controller(gid):
     return change_state_by_controller('STATE_OPEN')
 
 
-def cbm_store_result(topic, payload):
+def _cbm_store_result(topic, payload):
     global result
     global game_member_status
 
@@ -223,11 +240,19 @@ def cbm_store_result(topic, payload):
         #import pdb
         #pdb.set_trace()
 
+def _cbm_store_game_id(topic, payload):
+    global game_id
+
+    print('cbm_store_game_id------------------------------------------')
+    if is_controller is False:
+        payload_str = payload.decode('utf-8')
+        payload_dic = json.loads(payload_str)
+        game_id = payload_dic['game_id']
 
 #
 # return current_state
 #
-def cbm_change_state_by_message(topic, payload):
+def _cbm_change_state_by_message(topic, payload):
     global current_state
     print('cs_b_msg')
     if topic != TOPIC_COMMAND_CHANGE_STATE:
@@ -236,9 +261,12 @@ def cbm_change_state_by_message(topic, payload):
     payload_str = payload.decode('utf-8')
     payload_dic = json.loads(payload_str)
     state = payload_dic['state']
-    if state == 'STATE_RESULT': 
+    if state == 'STATE_OPEN': 
+         if is_controller is False:   
+             _cbm_store_game_id(topic, payload)
+    elif state == 'STATE_RESULT': 
          if is_controller is False:
-             cbm_store_result(topic, payload)
+             _cbm_store_result(topic, payload)
     if state in STATE_BEHAVIORS:
          val = _exec_player_action(state) 
          current_state = state
@@ -267,26 +295,22 @@ def change_state_by_controller(state):
         print('Error ! no match next_state in STATE_BEHAVIORS', state)
         return (current_state, 0)
     else:
-        if state == 'STATE_READY':
-            print('============== READY!!! ===============')
-
-        #agent_ret_val = _exec_agent_action(state)
         cont_ret_val = _exec_controller_action(state, game_member_status)
         if is_player:
             ret_val = _exec_player_action(state)
 
         print(f'--- state transfer ->({state}) --')
-        print('next state:', state)
         topic = STATE_BEHAVIORS[state]['topic']
         payload = STATE_BEHAVIORS[state]['payload']
         duration = STATE_BEHAVIORS[state]['duration']
+        cmd_seq += 1
+        payload['game_id'] = game_id
         payload['cmd_seq'] = cmd_seq
         payload['time_stamp'] = str(datetime.datetime.now())
         if state == 'STATE_RESULT':
             payload = payload | cont_ret_val
         print('publish:' , topic, payload)
         client.publish(topic, json.dumps(payload))
-        cmd_seq += 1
         current_state = state
         return  (current_state , duration)
 
@@ -318,55 +342,19 @@ def _exec_player_action(state):
 
 
 #
+#   periodocally publish message
+#
+#
 #    { <player_id> : { 'click_count' : 123  }, ... ,}
 #  
 #
 
 
-#
-#   periodocally publish message
-
 def exec_game_agent_task():
      if is_controller:
-          send_to_player_game_member_status()
+          _send_to_player_game_member_status()
      else:
-          send_to_controller_click_count()
-
-#
-#  send message fom  player to controller periodically
-#  players status (click count)
-#  player -----> game_agent  --->  controller
-#
-
-import time
-last_click_report = 0
-def send_to_controller_click_count():
-    global last_click_report
-
-    current_state = get_current_state()
-    #print('current_state:', current_state)
-    if current_state in ('STATE_OPEN', 'STATE_READY', 'STATE_RESULT', 'STATE_CLOSE'):
-        #print('z ',end='')
-        pass
-    else:
-        if (time.time() - last_click_report) < 0.5:
-            #print('z ',end='')
-            pass
-        else: 
-            print('report status to controller')
-            func = CB_PUBLISH_REPORT_STATUS
-            if func is None:
-                print('at status report ,  cb func is None , so skip')
-                import pdb
-                pdb.set_trace()
-                return None
-            else:
-                topic = TOPIC_PLAYER_REPORT
-                payload = func()
-                print('publish:' , topic, payload)
-                client.publish(topic, payload)
-                last_click_report = time.time()
-
+          _send_to_controller_player_status()
 
 
 #   publish click summary  from controller to player via game_agent 
@@ -374,25 +362,18 @@ def send_to_controller_click_count():
 #
 #  publish every 0.5sec
 
-last_publish_status = 0
-def send_to_player_game_member_status():
+last_send_status_time = 0
+def _send_to_player_game_member_status():
 
-    global last_publish_status
+    global last_send_status_time
 
-    if current_state in (
-                'STATE_OPEN', 
-                'STATE_READY', 
-                'STATE_RESULT', 
-                'STATE_CLOSE',
-         ):
+    if current_state in ('STATE_OPEN', 'STATE_READY', 'STATE_RESULT', 'STATE_CLOSE'):
         pass
     else:
-
-        if (time.time() - last_publish_status) < 0.5:
-            #print('z ',end='')
+        if (time.time() - last_send_status_time) < 0.5:
             pass
         else: 
-            print(f'publish summary in {current_state}')
+            print('send game member status to players')
             topic = TOPIC_GAME_SUMMARY
             payload = {
                    'game_id' : game_id,
@@ -400,7 +381,40 @@ def send_to_player_game_member_status():
                    'game_member_status' : game_member_status,
             }
             client.publish(topic, json.dumps(payload))
-            last_publish_status = time.time()
+            last_send_status_time = time.time()
+
+#
+#  send message fom  player to controller periodically
+#  players status (click count)
+#  player -----> game_agent  --->  controller
+#
+
+last_send_player_status_time = 0
+def _send_to_controller_player_status():
+    global last_send_player_status_time
+
+    current_state = get_current_state()
+    #print('current_state:', current_state)
+    if current_state in ('STATE_OPEN', 'STATE_READY', 'STATE_RESULT', 'STATE_CLOSE'):
+        pass
+    else:
+        if (time.time() - last_send_player_status_time) < 0.5:
+            pass
+        else: 
+            print('send players status to controller')
+            func = CB_PLAYER_CREATE_REPORT
+            if func is None:
+                print('at status report ,  cb func is None , so skip')
+                return None
+            else:
+                topic = TOPIC_PLAYER_REPORT
+                payload = func()
+                payload['game_id'] = game_id
+                #import pdb
+                #pdb.set_trace()
+                print('send(p->c): ' , topic, payload)
+                client.publish(topic, json.dumps(payload))
+                last_send_player_status_time = time.time()
 
 
 #
@@ -409,8 +423,11 @@ def send_to_player_game_member_status():
 #  player -> controller via game_agent  (status report)
 #
 #
-def cbm_receive_from_player_click_count(topic, payload):
+
+def _cbm_receive_from_player_player_status(topic, payload):
     global game_member_status
+    #import pdb
+    #pdb.set_trace()
     payload_str = payload.decode('utf-8')
     payload_dic = json.loads(payload_str)
     player_id = payload_dic['player_id']
@@ -429,28 +446,23 @@ def cbm_receive_from_player_click_count(topic, payload):
 # received  message (game summary ) from  controller via game_agent
 #   game_agent w/controller --->  game_agent w/player
 #
-def cbm_receive_from_controller_game_member_status(topic, payload):
+def _cbm_receive_from_controller_game_member_status(topic, payload):
     global game_member_status
     payload_str = payload.decode('utf-8')
     payload_dic = json.loads(payload_str)
     game_member_status = payload_dic['game_member_status']
-    func = CBM_RECEIVE_DISP_STATUS 
+    func = CB_PLAYER_DISP_STATUS
     if func is None:
         print('error! cb func is None==============================')
     else:
         print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-        func(topic, payload)
-
+        func(game_member_status)
 
 
 
 #
 # MQTT Setup
 #
-
-import paho.mqtt.client as mqtt 
-MQTT_BROKER = 'broker.emqx.io'
-MQTT_PORT = 1883
 
 
 #
@@ -473,17 +485,6 @@ def on_disconnect(client, userdata, rc):
     print("Unexpected disconnection.")
 
 
-
-# not in use
-#def on_message(client, userdata, msg):
-#    topic = msg.topic
-#    payload = msg.payload
-#    print("Received: ", topic , '   ' , payload)
-#    #end_time = time.perf_counter()
-#    #elapsed_time = end_time - start_time
-#    #print(f"Elapsed time: {elapsed_time} seconds")
-
-
 def on_message(client, userdata, msg):
     global current_state
     topic = msg.topic
@@ -494,16 +495,16 @@ def on_message(client, userdata, msg):
     if is_controller:
         if topic == TOPIC_PLAYER_REPORT:
             # update player state
-            cbm_receive_from_player_click_count(topic, payload)
+            _cbm_receive_from_player_player_status(topic, payload)
         else:
             print('Error!! unknown topic', topic)
     else:
         if 'player' in topic:
             pass  # skip if plyer in topic (send by me)
         elif topic == TOPIC_COMMAND_CHANGE_STATE:
-            current_state = cbm_change_state_by_message(topic, payload)
+            current_state = _cbm_change_state_by_message(topic, payload)
         elif topic == TOPIC_GAME_SUMMARY:
-            cbm_receive_from_controller_game_member_status(topic, payload)
+            _cbm_receive_from_controller_game_member_status(topic, payload)
         else:
             print('Error unkown topic', topic)
         
@@ -513,7 +514,7 @@ def on_message(client, userdata, msg):
 #
 
 client = None
-def connect():
+def _connect():
     global client
     client = mqtt.Client()
     client.on_connect = on_connect

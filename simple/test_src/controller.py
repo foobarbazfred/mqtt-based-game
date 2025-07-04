@@ -22,23 +22,19 @@
 #    Restructured function scopes for improved clarity and logic isolation
 # v0.12  2025/7/3
 #    Restructured function scopes for improved clarity and logic isolation
+# v0.13  2025/7/4
+#    Restructured function scopes for improved clarity and logic isolation
 #
 
 
 import datetime
 import time
 import json
+import random
+import game_agent
 
 PLAYER_ID = 'pc_py_0002'
 PLAYER_NICK_NAME = 'pcpy02'
-
-#from fsm import STATE_BEHAVIORS
-#from fsm import STATE_READY
-
-from topic_defs import *
-import game_agent
-game_agent.is_controller = True
-
 
 def proc_controller_find_winner(game_member_status):
     payload = {
@@ -51,7 +47,7 @@ def proc_controller_find_winner(game_member_status):
 game_agent.set_cb_func_for_controller('STATE_RESULT', proc_controller_find_winner)
 
 
-import random
+
 def game_sequence():
 
     current_state = None
@@ -63,7 +59,7 @@ def game_sequence():
 
     current_state, duration = game_agent.open_game_by_controller(game_id)
     last_state_transfer = time.time()
-    import pdb
+    #import pdb
     #pdb.set_trace()
 
     while True:

@@ -31,21 +31,13 @@ import json
 import paho.mqtt.client as mqtt 
 import pdb
 
-MQTT_BROKER = 'broker.emqx.io'
-MQTT_PORT = 1883
-
 PLAYER_ID = 'pc_py_0001'
 PLAYER_NICK_NAME = 'pcpy01'
 
 click_count = 0
 stop_flag = True
 
-
-from topic_defs import *
 import game_agent
-
-#pdb.set_trace()
-
 
 #
 # player's procedure
@@ -121,20 +113,18 @@ def proc_player_report_status():
     print('RRRRR')
     if stop_flag is False:
         click_count += 1
-    payload = json.dumps({
+    status = {
           'click_count': click_count,
           'player_id' : PLAYER_ID,
           'player_nick_name' : PLAYER_NICK_NAME,
           'time_stamp' : str(datetime.datetime.now()),
-    })
-    return  payload
+    }
+    return status
 
-def proc_player_display_status(topic, payload):
+def proc_player_display_status(game_member_status):
     print('cb func: display member status')    
-    payload_str = payload.decode('utf-8')
-    payload_dic = json.loads(payload_str)
     print('--=========--> [  ] <------=============---------')
-    print(payload_dic['game_member_status'])
+    print(game_member_status)
     print('--=====---------------------=============---------')
 
 
@@ -150,8 +140,8 @@ game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_1', proc_player_count
 game_agent.set_cb_func_for_player('STATE_STOP', proc_player_stop)
 game_agent.set_cb_func_for_player('STATE_RESULT', proc_player_result)
 game_agent.set_cb_func_for_player('STATE_CLOSE', proc_player_close)
-game_agent.set_cb_func_for_player('CB_REPORT_STATUS', proc_player_report_status)
-game_agent.set_cb_func_for_player('CBM_DISP_STATUS', proc_player_display_status)
+game_agent.set_cb_func_for_player('CB_PLAYER_CREATE_REPORT', proc_player_report_status)
+game_agent.set_cb_func_for_player('CB_PLAYER_DISP_STATUS', proc_player_display_status)
 
 
 
