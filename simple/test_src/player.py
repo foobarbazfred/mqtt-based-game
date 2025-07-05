@@ -22,6 +22,8 @@
 #    Restructured function scopes for improved clarity and logic isolation
 # v0.12  2025/7/3
 #    Restructured function scopes for improved clarity and logic isolation
+# v0.13  2025/7/5
+#    Refactored into class form
 #    
 #
 
@@ -30,136 +32,131 @@ import time
 import json
 import paho.mqtt.client as mqtt 
 import pdb
-
-PLAYER_ID = 'pc_py_0001'
-PLAYER_NICK_NAME = 'pcpy01'
-
-click_count = 0
-stop_flag = True
-
-import game_agent
-
-#
-# player's procedure
-#
-
-def proc_player_open():
-    global click_count
-    global stop_flag
-
-    print('cb func: open')
-    click_count = 0
-    stop_flag = True
+import random
 
 
-def proc_player_ready():
-    print('cb func: ready')
-
-def proc_player_countdown_to_start_3():
-    print('cb func: cdts3')
-
-def proc_player_countdown_to_start_2():
-    print('cb func: cdts2')
-
-def proc_player_countdown_to_start_1():
-    print('cb func: cdts1')
-
-def proc_player_start():
-    global click_count
-    global stop_flag
-    click_count = 0
-    stop_flag = False
-    print('cb func: start')
-
-def proc_player_countdown_to_stop_3():
-    print('cb func: cdtp3')
-
-def proc_player_countdown_to_stop_2():
-    print('cb func: cdtp2')
-
-def proc_player_countdown_to_stop_1():
-    print('cb func: cdtp1')
-
-def proc_player_stop():
-    global click_count
-    global stop_flag
-
-    stop_flag = True
-    print('cb func: stop')
-
-def proc_player_result():
-    print('cb func: result')
-    print('WWWWWWWWWWWWWWWWWIIIIIIIIIIIIIINNNNNNNNNNNNNNNNNNN')
-    #print('result:', payload)
-    result, game_member_status = game_agent.get_result()
-    print('winner:', result)
-    print('status:', game_member_status)
-    print('--=====---------------------=============---------')
+from game_agent import GameAgent
+from game_agent import set_cb_func_for_player
 
 
+class GamePlayer:
 
-def proc_player_close():
-    print('cb func: close')
+    def __init__(self, id, nick_name):
+        self.game_agent = GameAgent('player')
+        self.player_id = id
+        self.player_nick_name = nick_name
+        self.stop_flag = True
+        self.click_count = 0
 
+        set_cb_func_for_player('STATE_OPEN', self.proc_player_open)
+        set_cb_func_for_player('STATE_READY', self.proc_player_ready)
+        set_cb_func_for_player('STATE_COUNTDOWN_TO_START_3', self.proc_player_countdown_to_start_3)
+        set_cb_func_for_player('STATE_COUNTDOWN_TO_START_2', self.proc_player_countdown_to_start_2)
+        set_cb_func_for_player('STATE_COUNTDOWN_TO_START_1', self. proc_player_countdown_to_start_1)
+        set_cb_func_for_player('STATE_START', self.proc_player_start)
+        set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_3', self.proc_player_countdown_to_stop_3)
+        set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_2', self.proc_player_countdown_to_stop_2)
+        set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_1', self.proc_player_countdown_to_stop_1)
+        set_cb_func_for_player('STATE_STOP', self.proc_player_stop)
+        set_cb_func_for_player('STATE_RESULT', self.proc_player_result)
+        set_cb_func_for_player('STATE_CLOSE', self.proc_player_close)
+        set_cb_func_for_player('CB_PLAYER_DISP_STATUS', self.proc_player_display_game_member_status)
+        set_cb_func_for_player('CB_PLAYER_CREATE_REPORT', self.proc_player_report_status)    
+    
 
-#
-#  not use game_member_status
-#
-def proc_player_report_status():
-    global click_count
-    global stop_flag
-
-    print('cb func: get click')    
-    print('RRRRR')
-    if stop_flag is False:
-        click_count += 1
-    status = {
-          'click_count': click_count,
-          'player_id' : PLAYER_ID,
-          'player_nick_name' : PLAYER_NICK_NAME,
-          'time_stamp' : str(datetime.datetime.now()),
-    }
-    return status
-
-def proc_player_display_status(game_member_status):
-    print('cb func: display member status')    
-    print('--=========--> [  ] <------=============---------')
-    print(game_member_status)
-    print('--=====---------------------=============---------')
-
-
-game_agent.set_cb_func_for_player('STATE_OPEN', proc_player_open)
-game_agent.set_cb_func_for_player('STATE_READY', proc_player_ready)
-game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_START_3', proc_player_countdown_to_start_3)
-game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_START_2', proc_player_countdown_to_start_2)
-game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_START_1',  proc_player_countdown_to_start_1)
-game_agent.set_cb_func_for_player('STATE_START', proc_player_start)
-game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_3', proc_player_countdown_to_stop_3)
-game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_2', proc_player_countdown_to_stop_2)
-game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_1', proc_player_countdown_to_stop_1)
-game_agent.set_cb_func_for_player('STATE_STOP', proc_player_stop)
-game_agent.set_cb_func_for_player('STATE_RESULT', proc_player_result)
-game_agent.set_cb_func_for_player('STATE_CLOSE', proc_player_close)
-game_agent.set_cb_func_for_player('CB_PLAYER_CREATE_REPORT', proc_player_report_status)
-game_agent.set_cb_func_for_player('CB_PLAYER_DISP_STATUS', proc_player_display_status)
+    #
+    # main loop
+    #
+    def main_loop(self):
+        while True:
+            self.game_agent.exec_game_agent_task()
 
 
+    #
+    #  players status (click count)
+    #
+    def proc_player_report_status(self):
+    
+        print('cb func: report status')    
+        if self.stop_flag is False:
+            self.click_count += random.choice((0,1,1,1,2))
+        status = {
+              'click_count': self.click_count,
+              'player_id' : self.player_id,
+              'player_nick_name' : self.player_nick_name,
+              'time_stamp' : str(datetime.datetime.now()),
+        }
+        return status
+    
 
-
-
-last_state_transfer = 0
-duration = 0
-
-#
-# main function
-#
-
-
-def player_main_loop():
-    #game_agent.is_player = True
-    game_agent.init('player')
-    while True:
-        game_agent.exec_game_agent_task()
-
-
-player_main_loop()
+    
+    #
+    # player's procedure
+    #
+    
+    def proc_player_open(self, game_agent):
+        global click_count
+        global stop_flag
+    
+        print('cb func: open')
+        click_count = 0
+        stop_flag = True
+    
+    
+    def proc_player_ready(self, game_agent):
+        print('cb func: ready')
+    
+    def proc_player_countdown_to_start_3(self, game_agent):
+        print('cb func: cdts3')
+    
+    def proc_player_countdown_to_start_2(self, game_agent):
+        print('cb func: cdts2')
+    
+    def proc_player_countdown_to_start_1(self, game_agent):
+        print('cb func: cdts1')
+    
+    def proc_player_start(self, game_agent):
+        self.click_count = 0
+        self.stop_flag = False
+        print('cb func: start')
+    
+    def proc_player_countdown_to_stop_3(self, game_agent):
+        print('cb func: cdtp3')
+    
+    def proc_player_countdown_to_stop_2(self, game_agent):
+        print('cb func: cdtp2')
+    
+    def proc_player_countdown_to_stop_1(self, game_agent):
+        print('cb func: cdtp1')
+    
+    def proc_player_stop(self, game_agent):
+        global click_count
+        global stop_flag
+    
+        stop_flag = True
+        print('cb func: stop')
+    
+    def proc_player_result(self, game_agent):
+        print('cb func: game result')
+        print('WWWWWWWWWWWWWWWWWIIIIIIIIIIIIIINNNNNNNNNNNNNNNNNNN')
+        result = game_agent.get_result()
+        game_member_status = game_agent.get_game_member_status()
+        #import pdb
+        #pdb.set_trace()
+        print('winner:', result['winner'])
+        print('status:', game_member_status)
+        print('--=====---------------------=============---------')
+    
+    
+    #print(f'---------------------------------{type(result)}')
+    
+    def proc_player_close(self, game_agent):
+        print('cb func: close')
+    
+    def proc_player_display_game_member_status(self, game_member_status):
+        print('cb func: display game member status')    
+        print('--=========--> [  ] <------=============---------')
+        print(game_member_status)
+        print('--=====---------------------=============---------')
+    
+    
