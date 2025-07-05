@@ -18,7 +18,7 @@
 #    Restructured function scopes for improved clarity and logic isolation
 # v0.13  2025/7/5
 #    Refactored into class form
-
+#    Moved the state transition table into the GameAgent class for encapsulation
 
 
 from topic_defs import *
@@ -39,17 +39,39 @@ GAME_DURATIN = 10   # Constant defining the duration of a click match
 INIT_STATE = 'STATE_OPEN'
 
 
-#
-# call back for update click info
-# periodic process
-#
-CB_PLAYER_CREATE_REPORT = None
-CB_PLAYER_DISP_STATUS = None
 
-#
-#
-#
-STATE_BEHAVIORS = {
+class GameAgent:
+
+    def __init__(self, player_or_controller):
+
+        self.current_state = None
+        self.session_id = None
+        self.is_controller = False
+        self.is_player = False
+        self.game_member_status = None
+        self.result = None
+ 
+        self.game_member_status = {}
+        self.result = {}
+        self.current_state = INIT_STATE
+        self.client = None
+
+        # var for periodic send message cycle
+        self.last_send_player_status_time = 0
+        self.last_send_status_time = 0
+
+
+        #
+        # call back for update click info
+        # periodic process
+        #
+        self.CB_PLAYER_CREATE_REPORT = None
+        self.CB_PLAYER_DISP_STATUS = None
+
+        #
+        #
+        #
+        self.STATE_BEHAVIORS = {
 
     'STATE_OPEN' : {
        'topic' : TOPIC_COMMAND_CHANGE_STATE,
@@ -155,53 +177,7 @@ STATE_BEHAVIORS = {
 }
         
 
-def set_cb_func_for_controller(cb_name, func):
 
-    global STATE_BEHAVIORS
-
-    if cb_name in STATE_BEHAVIORS:
-        STATE_BEHAVIORS[cb_name]['controller_action'] = func
-    else:
-        print('Error in set_cb_func')
-        print('unknown state name', cb_name)
-
-def set_cb_func_for_player(cb_name, func):
-
-    global STATE_BEHAVIORS
-    global CB_PLAYER_CREATE_REPORT
-    global CB_PLAYER_DISP_STATUS
-
-    if cb_name in STATE_BEHAVIORS:
-        STATE_BEHAVIORS[cb_name]['player_action'] = func
-    elif  cb_name == 'CB_PLAYER_CREATE_REPORT':
-        CB_PLAYER_CREATE_REPORT = func
-    elif  cb_name == 'CB_PLAYER_DISP_STATUS':
-        CB_PLAYER_DISP_STATUS = func
-    else:
-        print('Error in set_cb_func')
-        print('unknown cb_name', cb_name)
-    
-
-
-class GameAgent:
-
-    def __init__(self, player_or_controller):
-
-        self.current_state = None
-        self.session_id = None
-        self.is_controller = False
-        self.is_player = False
-        self.game_member_status = None
-        self.result = None
- 
-        self.game_member_status = {}
-        self.result = {}
-        self.current_state = INIT_STATE
-        self.client = None
-
-        # var for periodic send message cycle
-        self.last_send_player_status_time = 0
-        self.last_send_status_time = 0
 
         print('__init__')
 
@@ -216,6 +192,31 @@ class GameAgent:
             print('Error in game_agent::init(), unkowon type', player_or_controller)
             return None
         self._MQTT_connect()
+
+
+
+
+
+    def set_cb_func_for_controller(self, cb_name, func):
+
+       if cb_name in self.STATE_BEHAVIORS:
+           self.STATE_BEHAVIORS[cb_name]['controller_action'] = func
+       else:
+           print('Error in set_cb_func')
+           print('unknown state name', cb_name)
+
+
+    def set_cb_func_for_player(self, cb_name, func):
+
+       if cb_name in self.STATE_BEHAVIORS:
+           self.STATE_BEHAVIORS[cb_name]['player_action'] = func
+       elif  cb_name == 'CB_PLAYER_CREATE_REPORT':
+           self.CB_PLAYER_CREATE_REPORT = func
+       elif  cb_name == 'CB_PLAYER_DISP_STATUS':
+           self.CB_PLAYER_DISP_STATUS = func
+       else:
+           print('Error in set_cb_func')
+           print('unknown cb_name', cb_name)
     
     
     def get_current_state(self):
@@ -224,7 +225,7 @@ class GameAgent:
     def get_next_state(self, state = None):
         if state is None:
            state = self.current_state
-        return STATE_BEHAVIORS[state]['next_state']
+        return self.STATE_BEHAVIORS[state]['next_state']
     
     def get_duration_to_transition(self, state):
         return STATE_BEHAVIORS[state]['duration']
@@ -284,7 +285,7 @@ class GameAgent:
         elif state == 'STATE_RESULT': 
              if self.is_controller is False:
                  self._cbm_store_result(topic, payload)
-        if state in STATE_BEHAVIORS:
+        if state in self.STATE_BEHAVIORS:
              self._exec_player_action(state) 
              self.current_state = state
         else:
@@ -306,7 +307,7 @@ class GameAgent:
         agent_ret_val = None
         cont_ret_val = None
     
-        if not state in STATE_BEHAVIORS:
+        if not state in self.STATE_BEHAVIORS:
             print('Error ! no match next_state in STATE_BEHAVIORS', state)
             return (self.current_state, 0)
         else:
@@ -317,9 +318,9 @@ class GameAgent:
                  self._exec_player_action(state)
     
             print(f'--- state transfer ->({state}) --')
-            topic = STATE_BEHAVIORS[state]['topic']
-            payload = STATE_BEHAVIORS[state]['payload']
-            duration = STATE_BEHAVIORS[state]['duration']
+            topic = self.STATE_BEHAVIORS[state]['topic']
+            payload = self.STATE_BEHAVIORS[state]['payload']
+            duration = self.STATE_BEHAVIORS[state]['duration']
             self.cmd_seq += 1
             payload['session_id'] = self.session_id
             payload['cmd_seq'] = self.cmd_seq
@@ -334,16 +335,16 @@ class GameAgent:
     
     def _exec_controller_action(self, state):
         val = None
-        if 'controller_action' in STATE_BEHAVIORS[state]:
-           func = STATE_BEHAVIORS[state]['controller_action']
+        if 'controller_action' in self.STATE_BEHAVIORS[state]:
+           func = self.STATE_BEHAVIORS[state]['controller_action']
            if func is not None:
                 val = func(self)
         return val
 
     def _exec_player_action(self, state):
         val = None
-        if 'player_action' in STATE_BEHAVIORS[state]:
-            func = STATE_BEHAVIORS[state]['player_action']
+        if 'player_action' in self.STATE_BEHAVIORS[state]:
+            func = self.STATE_BEHAVIORS[state]['player_action']
             if func is None:
                  print('not defined function, skip', state)
                  val = None
@@ -407,7 +408,7 @@ class GameAgent:
                 pass
             else: 
                 print('send players status to controller')
-                func = CB_PLAYER_CREATE_REPORT
+                func = self.CB_PLAYER_CREATE_REPORT
                 if func is None:
                     print('at status report ,  cb func is None , so skip')
                     return None
@@ -447,7 +448,7 @@ class GameAgent:
         payload_str = payload.decode('utf-8')
         payload_dic = json.loads(payload_str)
         self.game_member_status = payload_dic['game_member_status']
-        func = CB_PLAYER_DISP_STATUS
+        func = self.CB_PLAYER_DISP_STATUS
         if func is None:
             print('error! cb func is None==============================')
         else:

@@ -34,9 +34,6 @@ import time
 import json
 import random
 from game_agent import GameAgent
-from game_agent import set_cb_func_for_controller
-
-
 
 
 class GameController:
@@ -44,7 +41,7 @@ class GameController:
     def __init__(self):
         self.session_id = None
         self.game_agent = GameAgent('controller')
-        set_cb_func_for_controller('STATE_RESULT', self.proc_controller_make_result)
+        self.game_agent.set_cb_func_for_controller('STATE_RESULT', self.proc_controller_make_result)
 
     def main_loop(self):
         while True:

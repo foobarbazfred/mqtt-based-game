@@ -36,8 +36,6 @@ import random
 
 
 from game_agent import GameAgent
-from game_agent import set_cb_func_for_player
-
 
 class GamePlayer:
 
@@ -48,21 +46,20 @@ class GamePlayer:
         self.stop_flag = True
         self.click_count = 0
 
-        set_cb_func_for_player('STATE_OPEN', self.proc_player_open)
-        set_cb_func_for_player('STATE_READY', self.proc_player_ready)
-        set_cb_func_for_player('STATE_COUNTDOWN_TO_START_3', self.proc_player_countdown_to_start_3)
-        set_cb_func_for_player('STATE_COUNTDOWN_TO_START_2', self.proc_player_countdown_to_start_2)
-        set_cb_func_for_player('STATE_COUNTDOWN_TO_START_1', self. proc_player_countdown_to_start_1)
-        set_cb_func_for_player('STATE_START', self.proc_player_start)
-        set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_3', self.proc_player_countdown_to_stop_3)
-        set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_2', self.proc_player_countdown_to_stop_2)
-        set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_1', self.proc_player_countdown_to_stop_1)
-        set_cb_func_for_player('STATE_STOP', self.proc_player_stop)
-        set_cb_func_for_player('STATE_RESULT', self.proc_player_result)
-        set_cb_func_for_player('STATE_CLOSE', self.proc_player_close)
-        set_cb_func_for_player('CB_PLAYER_DISP_STATUS', self.proc_player_display_game_member_status)
-        set_cb_func_for_player('CB_PLAYER_CREATE_REPORT', self.proc_player_report_status)    
-    
+        self.game_agent.set_cb_func_for_player('STATE_OPEN', self.proc_player_open)
+        self.game_agent.set_cb_func_for_player('STATE_READY', self.proc_player_ready)
+        self.game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_START_3', self.proc_player_countdown_to_start_3)
+        self.game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_START_2', self.proc_player_countdown_to_start_2)
+        self.game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_START_1', self. proc_player_countdown_to_start_1)
+        self.game_agent.set_cb_func_for_player('STATE_START', self.proc_player_start)
+        self.game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_3', self.proc_player_countdown_to_stop_3)
+        self.game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_2', self.proc_player_countdown_to_stop_2)
+        self.game_agent.set_cb_func_for_player('STATE_COUNTDOWN_TO_STOP_1', self.proc_player_countdown_to_stop_1)
+        self.game_agent.set_cb_func_for_player('STATE_STOP', self.proc_player_stop)
+        self.game_agent.set_cb_func_for_player('STATE_RESULT', self.proc_player_result)
+        self.game_agent.set_cb_func_for_player('STATE_CLOSE', self.proc_player_close)
+        self.game_agent.set_cb_func_for_player('CB_PLAYER_DISP_STATUS', self.proc_player_display_game_member_status)
+        self.game_agent.set_cb_func_for_player('CB_PLAYER_CREATE_REPORT', self.proc_player_report_status)    
 
     #
     # main loop
