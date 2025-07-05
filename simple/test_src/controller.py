@@ -38,9 +38,9 @@ from game_agent import GameAgent
 
 class GameController:
  
-    def __init__(self):
+    def __init__(self, game_agent):
         self.session_id = None
-        self.game_agent = GameAgent('controller')
+        self.game_agent = game_agent
         self.game_agent.set_cb_func_for_controller('STATE_RESULT', self.proc_controller_make_result)
 
     def main_loop(self):

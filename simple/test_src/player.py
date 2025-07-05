@@ -35,16 +35,15 @@ import pdb
 import random
 
 
-from game_agent import GameAgent
-
 class GamePlayer:
 
-    def __init__(self, id, nick_name):
-        self.game_agent = GameAgent('player')
+    def __init__(self, game_agent, id, nick_name):
+
         self.player_id = id
         self.player_nick_name = nick_name
         self.stop_flag = True
         self.click_count = 0
+        self.game_agent = game_agent
 
         self.game_agent.set_cb_func_for_player('STATE_OPEN', self.proc_player_open)
         self.game_agent.set_cb_func_for_player('STATE_READY', self.proc_player_ready)
@@ -92,12 +91,9 @@ class GamePlayer:
     #
     
     def proc_player_open(self, game_agent):
-        global click_count
-        global stop_flag
-    
         print('cb func: open')
-        click_count = 0
-        stop_flag = True
+        self.click_count = 0
+        self.stop_flag = True
     
     
     def proc_player_ready(self, game_agent):
@@ -127,10 +123,8 @@ class GamePlayer:
         print('cb func: cdtp1')
     
     def proc_player_stop(self, game_agent):
-        global click_count
-        global stop_flag
     
-        stop_flag = True
+        self.stop_flag = True
         print('cb func: stop')
     
     def proc_player_result(self, game_agent):
