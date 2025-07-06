@@ -492,14 +492,13 @@ class GameAgent:
         self.client.connect()
         if self.is_controller:
             print('subscribe', f"{TOPIC_ROOT}/player/#")
-            client.subscribe(f"{TOPIC_ROOT}/player/#")
+            self.client.subscribe(f"{TOPIC_ROOT}/player/#")
         else:
             print('subscribe', TOPIC_COMMAND_CHANGE_STATE)  
             print('subscribe', TOPIC_GAME_SUMMARY)
             self.client.subscribe(TOPIC_COMMAND_CHANGE_STATE)  
             self.client.subscribe(TOPIC_GAME_SUMMARY)
         
-
         
 #
 # end of file
