@@ -19,4 +19,3 @@ def timestamp():
     (YY, MM, DD, hh, mm, ss, _, _) = time.localtime(jst)
     return f'{YY:02}/{MM:02}/{DD:02}T{hh:02}:{mm:02}:{ss:02}+09:00'
 
-

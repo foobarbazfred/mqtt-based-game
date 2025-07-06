@@ -41,7 +41,7 @@ MQTT_PORT = 1883
 
 GAME_DURATIN = 10   # Constant defining the duration of a click match
 INIT_STATE = 'STATE_OPEN'
-PERIODIC_INTERVAL = 500  # Constant defining interval msec for periodoc send message
+PERIODIC_INTERVAL = 500  # Constant defining interval (msec) for periodoc send message
 
 
 class GameAgent:
@@ -186,9 +186,9 @@ class GameAgent:
             self.is_controller = True
         elif player_or_controller == 'player':
             self.is_player = True
-        elif player_or_controller == 'player_and_controller'  or player_or_controller == 'controller_and_player':  
-            self.is_player = True
-            self.is_controller = True
+        #elif player_or_controller == 'player_and_controller'  or player_or_controller == 'controller_and_player':  
+        #    self.is_player = True
+        #    self.is_controller = True
         else:
             print('Error in game_agent::init(), unkowon type', player_or_controller)
             return None
@@ -376,10 +376,9 @@ class GameAgent:
     
     def _send_to_player_game_member_status(self):
     
-        if self.current_state in ('STATE_OPEN', 'STATE_READY', 'STATE_RESULT', 'STATE_CLOSE'):
+        if self.current_state in ('STATE_OPEN', 'STATE_READY', 'STATE_COUNTDOWN_TO_START_3', 'STATE_COUNTDOWN_TO_START_2', 'STATE_COUNTDOWN_TO_START_1', 'STATE_RESULT', 'STATE_CLOSE'):
             pass
         else:
-
             if time.ticks_diff(time.ticks_ms(), self.last_send_status_time) < PERIODIC_INTERVAL:
                 pass
             else: 
@@ -445,7 +444,6 @@ class GameAgent:
     #   game_agent w/controller --->  game_agent w/player
     #
     def _cbm_receive_from_controller_game_member_status(self, topic, payload):
-
         payload_str = payload.decode('utf-8')
         payload_dic = json.loads(payload_str)
         self.game_member_status = payload_dic['game_member_status']
@@ -486,11 +484,6 @@ class GameAgent:
                 print('Error unkown topic(L488)', topic_str)
             
     
-#    clinet = None
-#    is_controller = None
-#    is_player = None
-
-
     def _MQTT_connect(self):
         
         mqtt_client_id = get_uniq_id('rpi_', length=8)
@@ -503,12 +496,13 @@ class GameAgent:
         else:
             print('subscribe', TOPIC_COMMAND_CHANGE_STATE)  
             print('subscribe', TOPIC_GAME_SUMMARY)
-    
             self.client.subscribe(TOPIC_COMMAND_CHANGE_STATE)  
             self.client.subscribe(TOPIC_GAME_SUMMARY)
         
 
         
 #
+# end of file
 #
-#
+
+

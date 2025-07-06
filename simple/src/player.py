@@ -29,6 +29,14 @@
 import time
 import random
 from mylib import timestamp
+import ui
+
+from machine import PWM
+from machine import Pin
+#
+# neopixel
+#
+import neopixel
 
 
 class GamePlayer:
@@ -56,6 +64,9 @@ class GamePlayer:
         self.game_agent.set_cb_func_for_player('CB_PLAYER_DISP_STATUS', self.proc_player_display_game_member_status)
         self.game_agent.set_cb_func_for_player('CB_PLAYER_CREATE_REPORT', self.proc_player_report_status)    
 
+        self.np = neopixel.NeoPixel(Pin(17), 24)
+        self.buzzer = PWM(Pin(16))    
+
     #
     # main loop
     #
@@ -71,7 +82,7 @@ class GamePlayer:
     
         print('cb func: report status')    
         if self.stop_flag is False:
-            self.click_count += random.choice((0,1,1,1,2))
+            self.click_count += random.choice((1,2,2,2,3,3,3,3,4,4,5,5))
         status = {
               'click_count': self.click_count,
               'player_id' : self.player_id,
@@ -80,7 +91,6 @@ class GamePlayer:
         }
         return status
     
-
     
     #
     # player's procedure
@@ -90,46 +100,63 @@ class GamePlayer:
         print('cb func: open')
         self.click_count = 0
         self.stop_flag = True
-    
+        ui.np_clear(self.np)
     
     def proc_player_ready(self, game_agent):
         print('cb func: ready')
+        ui.np_light_neo(self.np, '3p')
     
     def proc_player_countdown_to_start_3(self, game_agent):
         print('cb func: cdts3')
-    
+        ui.np_light_neo(self.np, 'c3')
+        ui.play_sound(self.buzzer, 'c3')    
+
     def proc_player_countdown_to_start_2(self, game_agent):
         print('cb func: cdts2')
+        ui.np_light_neo(self.np, 'c2')
+        ui.play_sound(self.buzzer, 'c2')
     
     def proc_player_countdown_to_start_1(self, game_agent):
         print('cb func: cdts1')
+        ui.np_light_neo(self.np, 'c1')
+        ui.play_sound(self.buzzer, 'c1')
     
     def proc_player_start(self, game_agent):
+        print('cb func: start')
         self.click_count = 0
         self.stop_flag = False
-        print('cb func: start')
+        ui.np_light_neo(self.np, 'c0')
+        ui.play_sound(self.buzzer, 'c0')
     
     def proc_player_countdown_to_stop_3(self, game_agent):
         print('cb func: cdtp3')
+        ui.play_sound(self.buzzer, 'c3')    
     
     def proc_player_countdown_to_stop_2(self, game_agent):
         print('cb func: cdtp2')
+        ui.play_sound(self.buzzer, 'c2')    
     
     def proc_player_countdown_to_stop_1(self, game_agent):
         print('cb func: cdtp1')
+        ui.play_sound(self.buzzer, 'c1')    
     
     def proc_player_stop(self, game_agent):
-    
-        self.stop_flag = True
         print('cb func: stop')
+        self.stop_flag = True
+        ui.play_sound(self.buzzer, 'c0')    
     
     def proc_player_result(self, game_agent):
         print('cb func: game result')
         print('WWWWWWWWWWWWWWWWWIIIIIIIIIIIIIINNNNNNNNNNNNNNNNNNN')
         result = game_agent.get_result()
+        winner = result['winner']
         game_member_status = game_agent.get_game_member_status()
-        print('winner:', result['winner'])
+        print('winner:', winner)
         print('status:', game_member_status)
+        if winner == self.player_id:
+            ui.play_sound(self.buzzer, 'winner')
+        else:
+            ui.play_sound(self.buzzer, 'loser')
         print('--=====---------------------=============---------')
     
     
@@ -139,9 +166,27 @@ class GamePlayer:
         print('cb func: close')
     
     def proc_player_display_game_member_status(self, game_member_status):
+        opponent_max_clicks = 0
+        my_click_count = 0
+        opponent_member_clicks = []
         print('cb func: display game member status')    
         print('--=========--> [  ] <------=============---------')
         print(game_member_status)
         print('--=====---------------------=============---------')
-    
-    
+
+        for id in game_member_status.keys():
+            if id == self.player_id:
+                my_click_count = game_member_status[id]['click_count']
+            else:
+                opponent_member_clicks.append(game_member_status[id]['click_count'])
+        if len(opponent_member_clicks) > 0:
+            opponent_max_clicks = max(opponent_member_clicks)
+        else:
+            opponent_max_clicks = 0
+        print('ui.np_light_progress:' , my_click_count, opponent_max_clicks)
+        ui.np_light_progress(self.np, my_click_count, opponent_max_clicks)
+
+
+#
+# end of file
+#
