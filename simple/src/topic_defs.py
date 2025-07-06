@@ -1,9 +1,9 @@
 #
-# v0.07  2025/6/29 17:00
+# v0.08  2025/7/01 21:00
 #    refine
 #
 
-TOPIC_ROOT = 'game-renda'
+TOPIC_ROOT = 'game-renda-0123'
 
 # define topics
 
@@ -14,17 +14,24 @@ TOPIC_ROOT = 'game-renda'
 #
 # command message for change state machine
 #
+
 TOPIC_COMMAND_CHANGE_STATE = f'{TOPIC_ROOT}/command/change-state'
+
 #
 # payload
 #  { 'game_id' : <game_id>, 'next_state' : <next_state> }
 #   
-#   <game_id> := type(str)
-#   <next_state> := type(str)
+#   <game_id> := str type
+#   <next_state> := str type
 #
 
 
+#
+#
+#
+
 TOPIC_GAME_SUMMARY = f'{TOPIC_ROOT}/summary'
+
 #
 # payload
 #  {
@@ -39,9 +46,25 @@ TOPIC_GAME_SUMMARY = f'{TOPIC_ROOT}/summary'
 
 
 #
+# report message from player
+#
+
+TOPIC_PLAYER_REPORT = f'{TOPIC_ROOT}/player/report'
+
+#
+# payload
+#  { 'player_id' : <str>, 'click_count' : <int> }
+#
+#
+#
+
+
+#--------------------------------------------------------
+
+#
 # not in use
 #
-# command message for upload players status
+# command message to players for request upload status
 # controller -> player
 #
 #TOPIC_GAME_STATUS_REPORT = f'{TOPIC_ROOT}/command/upload-status'
@@ -66,16 +89,6 @@ TOPIC_GAME_SUMMARY = f'{TOPIC_ROOT}/summary'
 #
 
 
-#
-# report message from player
-#
-TOPIC_PLAYER_REPORT = f'{TOPIC_ROOT}/player/report'
-#
-# payload
-#  { 'player_id' : <str>, 'click_count' : <int> }
-#
-
-
 # not in use
 #
 # leave message from player
@@ -85,3 +98,4 @@ TOPIC_PLAYER_REPORT = f'{TOPIC_ROOT}/player/report'
 # payload
 #  { 'player_id' : <str>, 'player_nick_name' : <str> }
 #
+
