@@ -22,7 +22,7 @@
 # v0.13  2025/7/5
 #    Refactored into class form
 # v0.14  2025/7/6
-#    porting to MicroPython
+#    porting to MicroPython, game log fine tuning
 #    
 #
 
@@ -30,6 +30,7 @@ import time
 import random
 from mylib import timestamp
 import ui
+import pio_switch_counter
 
 from machine import PWM
 from machine import Pin
@@ -66,6 +67,7 @@ class GamePlayer:
 
         self.np = neopixel.NeoPixel(Pin(17), 24)
         self.buzzer = PWM(Pin(16))    
+        self.pio_sm = pio_switch_counter.init(Pin(0, Pin.IN, Pin.PULL_UP))
 
     #
     # main loop
@@ -82,7 +84,7 @@ class GamePlayer:
     
         print('cb func: report status')    
         if self.stop_flag is False:
-            self.click_count += random.choice((1,2,2,2,3,3,3,3,4,4,5,5))
+            self.click_count = pio_switch_counter.get_counter(self.pio_sm)
         status = {
               'click_count': self.click_count,
               'player_id' : self.player_id,
@@ -101,6 +103,7 @@ class GamePlayer:
         self.click_count = 0
         self.stop_flag = True
         ui.np_clear(self.np)
+        self.pio_sm.restart()
     
     def proc_player_ready(self, game_agent):
         print('cb func: ready')
@@ -147,15 +150,17 @@ class GamePlayer:
     
     def proc_player_result(self, game_agent):
         print('cb func: game result')
-        print('WWWWWWWWWWWWWWWWWIIIIIIIIIIIIIINNNNNNNNNNNNNNNNNNN')
+        print('---result--------------------')
         result = game_agent.get_result()
         winner = result['winner']
         game_member_status = game_agent.get_game_member_status()
         print('winner:', winner)
         print('status:', game_member_status)
         if winner == self.player_id:
+            print('WWWWWWWWWWWWWWWWWIIIIIIIIIIIIIINNNNNNNNNNNNNNNNNNN')
             ui.play_sound(self.buzzer, 'winner')
         else:
+            print('xxxxxxxxxxxxxxxxxxxxxxxxxx')
             ui.play_sound(self.buzzer, 'loser')
         print('--=====---------------------=============---------')
     

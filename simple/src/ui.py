@@ -1,5 +1,6 @@
 #
 # UI for MQTT Game Renad OH
+#  v0.01 2025/7/6  1st version
 #
 import time
 
@@ -29,6 +30,7 @@ def np_light_neo(np, ptn):
 
 CLICK_LIMIT = 100
 def np_light_progress(np, p0, p1):
+    print('light progress:', p0, p1)
     np_clear(np)
     if p0 + p1 < CLICK_LIMIT:
        space = CLICK_LIMIT - p0 - p1
@@ -39,6 +41,14 @@ def np_light_progress(np, p0, p1):
     p0_n = int(length / (p0 + p1 + space) * p0)
     sp_n = int(length / (p0 + p1 + space) * space)
     p1_n = int(length / (p0 + p1 + space) * p1)
+    print(p0_n, sp_n, p1_n)
+
+    # adjust
+    if space > 0:
+       sp_n = length - p0_n - p1_n
+    else:
+       sp_n = 0
+       p1_n = length - p0_n
 
     for i in range(p0_n):
         np[i]=(0, 08, 0)
@@ -49,9 +59,9 @@ def np_light_progress(np, p0, p1):
 
     # set RED marker
     if p0 > CLICK_LIMIT/2:
-       np[p0_n] = (8,0,0)
+       np[p0_n-1] = (8,0,0)
     elif p1 > CLICK_LIMIT/2:
-       np[p0_n+sp_n] = (8,0,0)
+       np[p0_n+sp_n-1] = (8,0,0)
     else:
        np[int(length/2)] = (8,0,0)
 
@@ -78,23 +88,33 @@ def play_sound(buzzer, type):
        buzzer.duty_u16(0) 
 
     elif type == 'loser':
-       buzzer.freq(650)
+       buzzer.freq(400)
        buzzer.duty_u16(32768) 
        time.sleep(0.1)
        buzzer.duty_u16(0) 
        time.sleep(0.1)
+       buzzer.freq(300)
        buzzer.duty_u16(32768) 
        time.sleep(0.5)
        buzzer.duty_u16(0) 
 
 
     elif type == 'winner':
-       buzzer.freq(1100)
+       buzzer.freq(400)
        buzzer.duty_u16(32768) 
        time.sleep(0.1)
        buzzer.duty_u16(0) 
        time.sleep(0.1)
-       buzzer.freq(1200)
+       buzzer.freq(600)
+       buzzer.duty_u16(32768) 
+       time.sleep(0.1)
+       buzzer.duty_u16(0) 
+       buzzer.freq(400)
+       buzzer.duty_u16(32768) 
+       time.sleep(0.1)
+       buzzer.duty_u16(0) 
+       time.sleep(0.1)
+       buzzer.freq(600)
        buzzer.duty_u16(32768) 
        time.sleep(0.5)
        buzzer.duty_u16(0) 
