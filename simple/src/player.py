@@ -23,6 +23,8 @@
 #    Refactored into class form
 # v0.14  2025/7/6
 #    porting to MicroPython, game log fine tuning
+# v0.15  2025/7/14
+#    define costant for NeoPixel number of LED 
 #    
 #
 
@@ -38,6 +40,8 @@ from machine import Pin
 # neopixel
 #
 import neopixel
+
+NEO_PIXEL_SIZE = 12
 
 
 class GamePlayer:
@@ -65,7 +69,7 @@ class GamePlayer:
         self.game_agent.set_cb_func_for_player('CB_PLAYER_DISP_STATUS', self.proc_player_display_game_member_status)
         self.game_agent.set_cb_func_for_player('CB_PLAYER_CREATE_REPORT', self.proc_player_report_status)    
 
-        self.np = neopixel.NeoPixel(Pin(17), 24)
+        self.np = neopixel.NeoPixel(Pin(17), NEO_PIXEL_SIZE)
         self.buzzer = PWM(Pin(16))    
         self.pio_sm = pio_switch_counter.init(Pin(0, Pin.IN, Pin.PULL_UP))
 

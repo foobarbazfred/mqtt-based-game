@@ -1,6 +1,7 @@
 #
 # UI for MQTT Game Renad OH
 #  v0.01 2025/7/6  1st version
+#  v0.01 2025/7/14  fix number format error  08 -> 8
 #
 import time
 
@@ -51,11 +52,11 @@ def np_light_progress(np, p0, p1):
        p1_n = length - p0_n
 
     for i in range(p0_n):
-        np[i]=(0, 08, 0)
+        np[i]=(0, 8, 0)
     for i in range(sp_n):
         np[p0_n + i]=(0, 0, 0)
     for i in range(p1_n):
-        np[p0_n + sp_n + i]=(08, 08, 0)
+        np[p0_n + sp_n + i]=(8, 8, 0)
 
     # set RED marker
     if p0 > CLICK_LIMIT/2:
