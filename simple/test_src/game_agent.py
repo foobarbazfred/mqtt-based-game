@@ -19,6 +19,13 @@
 # v0.13  2025/7/5
 #    Refactored into class form
 #    Moved the state transition table into the GameAgent class for encapsulation
+# v0.14  2025/7/16
+#    Optimize algorithm performance  
+#    Suppress report transmission during countdown phase  
+#    Fine-tune QoS settings  
+#    Set QoS to 1 when publishing or subscribing to TOPIC_COMMAND_CHANGE_STATE
+
+
 
 
 from topic_defs import *
@@ -32,8 +39,27 @@ import time
 # MQTT Defs
 #
 import paho.mqtt.client as mqtt 
+
+#
+# EMQX
+#
 MQTT_BROKER = 'broker.emqx.io'
 MQTT_PORT = 1883
+
+#
+# HIVE MQ
+#
+#MQTT_BROKER = 'broker.hivemq.com'
+#MQTT_PORT = 1883
+
+#
+# local mosquitto
+#
+#MQTT_BROKER = '192.168.10.100'
+#MQTT_PORT = 1883
+
+
+
 
 GAME_DURATIN = 10   # Constant defining the duration of a click match
 INIT_STATE = 'STATE_OPEN'
@@ -55,7 +81,7 @@ class GameAgent:
         self.result = {}
         self.current_state = INIT_STATE
         self.client = None
-
+        self.cmd_seq = 0
         # var for periodic send message cycle
         self.last_send_player_status_time = 0
         self.last_send_status_time = 0
@@ -176,9 +202,6 @@ class GameAgent:
     },
 }
         
-
-
-
         print('__init__')
 
         if player_or_controller == 'controller':
@@ -192,8 +215,6 @@ class GameAgent:
             print('Error in game_agent::init(), unkowon type', player_or_controller)
             return None
         self._MQTT_connect()
-
-
 
 
 
@@ -245,6 +266,7 @@ class GameAgent:
         print('open')
         self.game_member_status = {}
         self.result = {}
+        self.cmd_seq = 0
     
     def open_game_by_controller(self, session_id):
         self.session_id = session_id
@@ -279,6 +301,7 @@ class GameAgent:
         payload_str = payload.decode('utf-8')
         payload_dic = json.loads(payload_str)
         state = payload_dic['state']
+        print(f'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>new state: {state}')
         if state == 'STATE_OPEN': 
              if self.is_controller is False:   
                  self._cbm_store_session_id(topic, payload)
@@ -296,12 +319,12 @@ class GameAgent:
     
     #
     # change state function
+    # controller -> MQTT -> player
     #
     # return value:
     #    current_state:  current state name
     #    duration:  (wait time until transfer to next state)
     #
-    cmd_seq = 0
     def change_state_by_controller(self, state):
     
         agent_ret_val = None
@@ -328,8 +351,9 @@ class GameAgent:
             payload['game_member_status'] = self.game_member_status
             if state == 'STATE_RESULT':
                 payload['result'] = cont_ret_val
-            print('publish:' , topic, payload)
-            self.client.publish(topic, json.dumps(payload))
+            #print('publish:' , topic, payload)
+            print('---------------------------------- publish:' , topic)
+            self.client.publish(topic, json.dumps(payload), qos=1)
             self.current_state = state
             return  self.current_state , duration
     
@@ -376,7 +400,7 @@ class GameAgent:
     
     def _send_to_player_game_member_status(self):
     
-        if self.current_state in ('STATE_OPEN', 'STATE_READY', 'STATE_RESULT', 'STATE_CLOSE'):
+        if self.current_state in ('STATE_OPEN', 'STATE_READY', 'STATE_COUNTDOWN_TO_START_3', 'STATE_COUNTDOWN_TO_START_2', 'STATE_COUNTDOWN_TO_START_1', 'STATE_RESULT', 'STATE_CLOSE'):
             pass
         else:
             if (time.time() - self.last_send_status_time) < 0.5:
@@ -389,7 +413,7 @@ class GameAgent:
                        'game_member_status' : self.game_member_status,
                 }
                 print('send to players, game member status')
-                print(topic, payload)
+                #print(topic, payload)
                 self.client.publish(topic, json.dumps(payload))
                 self.last_send_status_time = time.time()
     
@@ -420,6 +444,7 @@ class GameAgent:
                     print('send(p->c): ' , topic, payload)
                     self.client.publish(topic, json.dumps(payload))
                     self.last_send_player_status_time = time.time()
+                    
     
     #
     #  receive message from player
@@ -484,7 +509,7 @@ class GameAgent:
     
     def on_connect_for_player(self, client, userdata, flag, rc):
         print("Connected with result code " + str(rc))
-        self.client.subscribe(TOPIC_COMMAND_CHANGE_STATE)  
+        self.client.subscribe(TOPIC_COMMAND_CHANGE_STATE, qos=1)  
         self.client.subscribe(TOPIC_GAME_SUMMARY)
     
     def on_disconnect(self, client, userdata, rc):
@@ -495,7 +520,8 @@ class GameAgent:
         topic = msg.topic
         payload = msg.payload
         print('------------------')
-        print("Received: ", topic , '   ' , payload)
+        print("Received: ", topic )
+        #print("Received: ", topic , '   ' , payload)
     
         if self.is_controller:
             if topic == TOPIC_PLAYER_REPORT:
@@ -507,6 +533,7 @@ class GameAgent:
             if 'player' in topic:
                 pass  # skip if plyer in topic (send by me)
             elif topic == TOPIC_COMMAND_CHANGE_STATE:
+                #print(payload)
                 self.current_state = self._cbm_change_state_by_message(topic, payload)
             elif topic == TOPIC_GAME_SUMMARY:
                 self._cbm_receive_from_controller_game_member_status(topic, payload)

@@ -20,7 +20,9 @@
 #    Moved the state transition table into the GameAgent class for encapsulation
 # v0.14  2025/7/6
 #    porting to MicroPython
-#
+# v0.15  2025/7/16
+#    adjust QOS
+#    Set QoS to 1 when publishing and subscribing to TOPIC_COMMAND_CHANGE_STATE
 
 
 
@@ -296,7 +298,7 @@ class GameAgent:
     
     #
     # change state function
-    #
+    # flow: controller -> MQTT -> player
     # return value:
     #    current_state:  current state name
     #    duration:  (wait time until transfer to next state)
@@ -328,7 +330,7 @@ class GameAgent:
             if state == 'STATE_RESULT':
                 payload['result'] = cont_ret_val
             print('publish:' , topic, payload)
-            self.client.publish(topic, json.dumps(payload))
+            self.client.publish(topic, json.dumps(payload), qos=1)
             self.current_state = state
             return  self.current_state , duration
     
@@ -496,7 +498,7 @@ class GameAgent:
         else:
             print('subscribe', TOPIC_COMMAND_CHANGE_STATE)  
             print('subscribe', TOPIC_GAME_SUMMARY)
-            self.client.subscribe(TOPIC_COMMAND_CHANGE_STATE)  
+            self.client.subscribe(TOPIC_COMMAND_CHANGE_STATE, qos=1)  
             self.client.subscribe(TOPIC_GAME_SUMMARY)
         
         
