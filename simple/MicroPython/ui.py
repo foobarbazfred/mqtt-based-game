@@ -2,6 +2,7 @@
 # UI for MQTT Game Renad OH
 #  v0.01 2025/7/6  1st version
 #  v0.01 2025/7/14  fix number format error  08 -> 8
+#  v0.02 2025/7/20  change countdown frequency
 #
 import time
 
@@ -77,13 +78,13 @@ def np_light_progress(np, p0, p1):
 def play_sound(buzzer, type):
 
     if type == 'c3'  or type == 'c2' or type == 'c1':
-       buzzer.freq(700)
+       buzzer.freq(392)
        buzzer.duty_u16(32768) 
        time.sleep(0.1)
        buzzer.duty_u16(0) 
 
     elif type == 'c0':
-       buzzer.freq(1100)
+       buzzer.freq(523)
        buzzer.duty_u16(32768) 
        time.sleep(0.1)
        buzzer.duty_u16(0) 
