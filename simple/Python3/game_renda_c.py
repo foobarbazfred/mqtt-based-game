@@ -9,7 +9,6 @@
 from controller  import GameController
 from game_agent import GameAgent
 
-
 def main():
 
     game_agent = GameAgent('controller')

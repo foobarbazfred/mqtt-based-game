@@ -1,8 +1,9 @@
 #
-# class GameAgent
+# GameAgent class 
+#
 # manage State Machine and communicate controller and players
-# pc sample version
-# file: ~/lang/py/mqtt/game_rk_game_agent/game_agent.py
+# Python3 version
+#
 #
 # v0.07  2025/6/29 17:00
 #    create game_agent
@@ -24,15 +25,18 @@
 #    Suppress report transmission during countdown phase  
 #    Fine-tune QoS settings  
 #    Set QoS to 1 when publishing or subscribing to TOPIC_COMMAND_CHANGE_STATE
+# v0.15  2025/7/20
+#    Change the MQTT protocol version to V5
+#    Add a resend/retry mechanism when a QoS1 publish fails due to "quota exceeded" error
+#
 
 
-
-
+from collections import OrderedDict
 from topic_defs import *
 import datetime
+import time
 import json
 import pdb
-import time
 
 
 #
@@ -59,11 +63,10 @@ MQTT_PORT = 1883
 #MQTT_PORT = 1883
 
 
-
-
 GAME_DURATIN = 10   # Constant defining the duration of a click match
 INIT_STATE = 'STATE_OPEN'
 
+MQTT_QUOTA_EXCEEDED = 0x97
 
 
 class GameAgent:
@@ -85,6 +88,9 @@ class GameAgent:
         # var for periodic send message cycle
         self.last_send_player_status_time = 0
         self.last_send_status_time = 0
+
+        self.publish_history = {}
+        self.retry_queue = OrderedDict()  # 
 
 
         #
@@ -348,12 +354,15 @@ class GameAgent:
             payload['session_id'] = self.session_id
             payload['cmd_seq'] = self.cmd_seq
             payload['time_stamp'] = str(datetime.datetime.now())
-            payload['game_member_status'] = self.game_member_status
+            #payload['game_member_status'] = self.game_member_status
             if state == 'STATE_RESULT':
                 payload['result'] = cont_ret_val
+                payload['game_member_status'] = self.game_member_status
             #print('publish:' , topic, payload)
             print('---------------------------------- publish:' , topic)
-            self.client.publish(topic, json.dumps(payload), qos=1)
+            result = self.client.publish(topic, json.dumps(payload), qos=1)
+            mid = result.mid
+            self.publish_history[mid] = (topic, json.dumps(payload))
             self.current_state = state
             return  self.current_state , duration
     
@@ -384,11 +393,13 @@ class GameAgent:
     #    { <player_id> : { 'click_count' : 123  }, ... ,}
     #  
     #
-    
-    
     def exec_game_agent_task(self):
          if self.is_controller:
-              self._send_to_player_game_member_status()
+              if len(self.retry_queue) > 0:
+                   print('should be retry', self.retry_queue)
+                   self._mqtt_recovery_lost_message()
+              else:
+                   self._send_to_player_game_member_status()
          else:
               self._send_to_controller_player_status()
     
@@ -444,7 +455,14 @@ class GameAgent:
                     print('send(p->c): ' , topic, payload)
                     self.client.publish(topic, json.dumps(payload))
                     self.last_send_player_status_time = time.time()
-                    
+
+    def _mqtt_recovery_lost_message(self):
+         print('retry send message lost by quota over ')
+         mid, value = self.retry_queue.popitem(last=False)  # get one retry tuple from oldest
+         topic,msg = value
+         time.sleep(0.05)
+         result = self.client.publish(topic, msg , qos=1)
+         time.sleep(0.05)
     
     #
     #  receive message from player
@@ -486,13 +504,14 @@ class GameAgent:
     # setup MQTT
     #
     def _MQTT_connect(self):
-        self.client = mqtt.Client()
+        self.client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv5)
         if self.is_controller:
             self.client.on_connect = self.on_connect_for_controller
         else:
             self.client.on_connect = self.on_connect_for_player
         self.client.on_disconnect = self.on_disconnect
         self.client.on_message = self.on_message
+        self.client.on_publish = self.on_publish
         self.client.connect(MQTT_BROKER, MQTT_PORT, 60)
         self.client.loop_start()
 
@@ -502,20 +521,33 @@ class GameAgent:
     #
     #========================================
     
-    def on_connect_for_controller(self, client, userdata, flag, rc):
-        print("Connected with result code " + str(rc))
+
+    #client, userdata, flag, rc):
+    def on_connect_for_controller(self, client, userdata, flags, reason_code, properties):
+        print("Connected with result code " + str(reason_code))
         print('subscribe', f"{TOPIC_ROOT}/player/#")
         self.client.subscribe(f"{TOPIC_ROOT}/player/#")
     
-    def on_connect_for_player(self, client, userdata, flag, rc):
-        print("Connected with result code " + str(rc))
+    #self, client, userdata, flag, rc):
+    def on_connect_for_player(self, client, userdata, flags, reason_code, properties):
+        print("Connected with result code " + str(reason_code))
         self.client.subscribe(TOPIC_COMMAND_CHANGE_STATE, qos=1)  
         self.client.subscribe(TOPIC_GAME_SUMMARY)
     
-    def on_disconnect(self, client, userdata, rc):
-      if  rc != 0:
-        print("Unexpected disconnection.")
+    def on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties):
+        if reason_code.value != 0:
+           print("Unexpected disconnection.")
     
+    def on_publish(self, client, userdata, mid, reason_code, properties):
+        print('-- on_publish()---')
+        reason_code_value = reason_code.value
+        print(f"Published message ID: {mid}, reason: {reason_code_value:02x} ({reason_code.getName()})")
+        if reason_code_value  == MQTT_QUOTA_EXCEEDED:
+            if mid in self.publish_history:
+                self.retry_queue[mid] = self.publish_history[mid]
+        if mid in self.publish_history:
+            del self.publish_history[mid]
+
     def on_message(self, client, userdata, msg):
         topic = msg.topic
         payload = msg.payload
@@ -540,4 +572,7 @@ class GameAgent:
             else:
                 print('Error unkown topic', topic)
             
-    
+
+#
+# end of file
+#
