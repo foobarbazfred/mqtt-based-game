@@ -25,6 +25,8 @@
 #    porting to MicroPython, game log fine tuning
 # v0.15  2025/7/14
 #    define costant for NeoPixel number of LED 
+# v0.16  2025/8/2
+#    Refactor GamePlayer initialization to accept UI config dictionary
 #    
 #
 
@@ -41,18 +43,39 @@ from machine import Pin
 #
 import neopixel
 
-NEO_PIXEL_SIZE = 12
+DEFAULT_GPIO_SWITCH = 0
+DEFAULT_GPIO_SPEAKER = 16
+DEFAULT_GPIO_NEOPIXEL = 17
+DEFAULT_NEOPIXEL_LED_SIZE = 24
+
+DEFAULT_UI_CONFIG = {
+   'GPIO_SWITCH' : DEFAULT_GPIO_SWITCH,
+   'GPIO_SPEAKER' : DEFAULT_GPIO_SPEAKER,
+   'GPIO_NEOPIXEL' : DEFAULT_GPIO_NEOPIXEL,
+   'NEOPIXEL_LED_SIZE' : DEFAULT_NEOPIXEL_LED_SIZE
+}
 
 
 class GamePlayer:
 
-    def __init__(self, game_agent, id, nick_name):
+    def __init__(self, game_agent, id, nick_name, ui_config = None ):
 
         self.player_id = id
         self.player_nick_name = nick_name
         self.stop_flag = True
         self.click_count = 0
         self.game_agent = game_agent
+        self.ui_config = DEFAULT_UI_CONFIG
+
+        if ui_config is not None:
+           if 'GPIO_SWITCH' in ui_config:
+               self.ui_config['GPIO_SWITCH'] = ui_config['GPIO_SWITCH']
+           if 'GPIO_SPEAKER' in ui_config:
+               self.ui_config['GPIO_SPEAKER'] = ui_config['GPIO_SPEAKER']
+           if 'GPIO_NEOPIXEL' in ui_config:
+               self.ui_config['GPIO_NEOPIXEL'] = ui_config['GPIO_NEOPIXEL']
+           if 'NEOPIXEL_LED_SIZE' in ui_config:
+               self.ui_config['NEOPIXEL_LED_SIZE'] = ui_config['NEOPIXEL_LED_SIZE']
 
         self.game_agent.set_cb_func_for_player('STATE_OPEN', self.proc_player_open)
         self.game_agent.set_cb_func_for_player('STATE_READY', self.proc_player_ready)
@@ -69,9 +92,9 @@ class GamePlayer:
         self.game_agent.set_cb_func_for_player('CB_PLAYER_DISP_STATUS', self.proc_player_display_game_member_status)
         self.game_agent.set_cb_func_for_player('CB_PLAYER_CREATE_REPORT', self.proc_player_report_status)    
 
-        self.np = neopixel.NeoPixel(Pin(17), NEO_PIXEL_SIZE)
-        self.buzzer = PWM(Pin(16))    
-        self.pio_sm = pio_switch_counter.init(Pin(0, Pin.IN, Pin.PULL_UP))
+        self.np = neopixel.NeoPixel(Pin(self.ui_config['GPIO_NEOPIXEL']), self.ui_config['NEOPIXEL_LED_SIZE'])
+        self.buzzer = PWM(Pin(self.ui_config['GPIO_SPEAKER']))    
+        self.pio_sm = pio_switch_counter.init(Pin(self.ui_config['GPIO_SWITCH'], Pin.IN, Pin.PULL_UP))
 
     #
     # main loop
