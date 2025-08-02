@@ -1,5 +1,6 @@
 #
 # MQTT Game Renda OH 
+#  for player(01)
 #  main function
 #  v0.01 (2025/8/2)
 #
