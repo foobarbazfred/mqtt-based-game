@@ -1,6 +1,6 @@
-# MQTT-based Competitive Game: MQTT Button Mash King
+# MQTT-based Competitive Game: MQTT RENDA King
 
-- MQTT Button Mash King is a competitive button-mashing game that utilizes MQTT and is designed for play in multiple locations. Players compete to see how many times they can press a button within a set period.
+- MQTT RENDA King is a competitive button-mashing game that utilizes MQTT and is designed for play in multiple locations. Players compete to see how many times they can press a button within a set period.
 - The game consists of a controller and player devices:
    - The controller program must run on Python 3 (such as on a PC or Raspberry Pi) because it uses MQTT V5.
    - The player program runs on MicroPython on Raspberry Pi Pico W or Raspberry Pi Pico 2 W.
