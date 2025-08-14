@@ -45,7 +45,7 @@ class GameController:
 
     def main_loop(self):
         while True:
-            self.session_id = 'game_session_123_' + random.choice(('x','y','x'))
+            self.session_id = 'game_session_123_' + random.choice(('x','y','x'))  # session_id is not use in the simple version for simplicity.
             print(f'game start ({self.session_id})')
             self.game_sequence()
             print(f'game finished ({self.session_id})')
