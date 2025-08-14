@@ -7,3 +7,10 @@
       - MQTT通信は、umqtt.simpleを使っており MQTT V3です
       - スイッチのチャタリングを気にしないのであれば、PIOを外すことでESP32 + MicroPythonの組み合わせで実行できると思います
 - 本ゲームはCQ出版 Interface誌  2025年10月号の解説記事として作成しました
+
+- インストールメモ(作成中)
+   - MicroPythonではumqtt.simpleモジュールを使ってMQTT通信しています。組み込みモジュールには含まれていませんので、以下でモジュールを読み込んでください。
+      ```
+        >>> import mip
+        >>> mip.install('umqtt.simple')
+     ```
