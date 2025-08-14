@@ -3,6 +3,8 @@
 #  for player(02)
 #  main function
 #  v0.01 (2025/8/2)
+#  v0.02 (2025/8/14)
+#     Bug fix: Missing argument ui_config in GamePlayer
 #
 
 from player import GamePlayer
@@ -29,7 +31,8 @@ def main():
         'NEOPIXEL_LED_SIZE' : NEOPIXEL_LED_SIZE
     }
 
-    game_player = GamePlayer(game_agent, player_id, player_nick_name)
+    game_player = GamePlayer(game_agent, player_id, player_nick_name, ui_config)
+
     game_player.main_loop()
     
     
