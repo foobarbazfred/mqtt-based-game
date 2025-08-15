@@ -27,7 +27,8 @@
 #    define costant for NeoPixel number of LED 
 # v0.16  2025/8/2
 #    Refactor GamePlayer initialization to accept UI config dictionary
-#    
+# v0.17  2025/8/15
+#     Bug fix: Initialize PIO StateMachine during STATE_START (func:proc_player_start)
 #
 
 import time
@@ -129,9 +130,9 @@ class GamePlayer:
         print('cb func: open')
         self.click_count = 0
         self.stop_flag = True
-        ui.np_clear(self.np)
         self.pio_sm.restart()
-    
+        ui.np_clear(self.np)
+
     def proc_player_ready(self, game_agent):
         print('cb func: ready')
         ui.np_light_neo(self.np, '3p')
@@ -155,6 +156,7 @@ class GamePlayer:
         print('cb func: start')
         self.click_count = 0
         self.stop_flag = False
+        self.pio_sm.restart()        
         ui.np_light_neo(self.np, 'c0')
         ui.play_sound(self.buzzer, 'c0')
     
