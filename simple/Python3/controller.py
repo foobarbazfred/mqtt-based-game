@@ -1,11 +1,9 @@
 #!/usr/bin/python3
 
 #  
-# controller sample code for MQTT Renda OH
-# pc sample version
-# file: ~/lang/py/mqtt/game_rk_game_agent/controller.py
+# controller for MQTT Game Renda OH
+# pc version  (Python3)
 #
-# PC Sample Version
 # v0.04  2025/6/28 refactor, 
 #    Extracted FSM components into a separate module
 # v0.05  2025/6/29 refactor, 
