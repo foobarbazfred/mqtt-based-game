@@ -1,7 +1,11 @@
 #  
 # controller code for MQTT Renda OH
 #
-# PC Sample Version
+# This is a sample code written in MicroPython. 
+# Since it uses MQTT v3, it does not implement quota limit handling 
+#  and cannot recover lost messages. 
+# Please use the PC version of Controller Class and Game_Agent Class instead.
+#
 # v0.04  2025/6/28 refactor, 
 #    Extracted FSM components into a separate module
 # v0.05  2025/6/29 refactor, 
