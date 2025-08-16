@@ -1,7 +1,6 @@
 # class GameAgent
 # manage State Machine and communicate controller and players
-# pc sample version
-# file: ~/lang/py/mqtt/game_rk_game_agent/game_agent.py
+# micropython version
 #
 # v0.07  2025/6/29 17:00
 #    create game_agent
