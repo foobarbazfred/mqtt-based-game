@@ -9,7 +9,7 @@
 - 本ゲームはCQ出版 Interface誌  2025年10月号の解説記事として作成しました
 
 - インストールメモ(作成中)
-   - MicroPythonではumqtt.simpleモジュールを使ってMQTT通信しています。組み込みモジュールには含まれていませんので、以下でモジュールを読み込んでください。
+   - MicroPythonではumqtt.simpleモジュールを使ってMQTT通信しています。umqtt.simpleは組み込みモジュールには含まれていませんので、以下の操作でモジュールを読み込んでください。
       ```
         >>> import mip
         >>> mip.install('umqtt.simple')
