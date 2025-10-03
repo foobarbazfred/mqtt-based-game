@@ -13,3 +13,7 @@
         >>> import mip
         >>> mip.install('umqtt.simple')
      ```
+
+### CQ出版 Interface誌
+- Interface 2025年10月号  https://interface.cqpub.co.jp/magazine/202510/
+- <img src="https://interface.cqpub.co.jp/wp-content/uploads/MIF202510-scaled.jpg" width=100>
